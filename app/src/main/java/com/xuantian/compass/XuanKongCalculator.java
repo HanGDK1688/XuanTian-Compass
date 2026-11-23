@@ -114,11 +114,11 @@ public class XuanKongCalculator {
                 String name;
 
                 if (n <= 3) {
-                    name = "上元第" + n + "运";
+                   name = "上元第" + n + "运";
                 } else if (n <= 6) {
-                    name = "中元第" + (n - 3) + "运";
+                   name = "中元第" + n + "运";
                 } else {
-                    name = "下元第" + (n - 6) + "运";
+                   name = "下元第" + n + "运";
                 }
 
                 return new PeriodInfo(
