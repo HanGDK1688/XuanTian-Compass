@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 指南针传感器 -->
     <uses-feature
         android:name="android.hardware.sensor.compass"
         android:required="false" />
 
+    <!-- 加速度传感器 -->
     <uses-feature
         android:name="android.hardware.sensor.accelerometer"
         android:required="false" />
@@ -31,6 +33,12 @@
         <!-- 玄空飞星排盘页面 -->
         <activity
             android:name=".XuanKongActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <!-- V1.4 住宅风水分析页面 -->
+        <activity
+            android:name=".ResidenceActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 
