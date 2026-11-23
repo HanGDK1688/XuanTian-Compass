@@ -1,14 +1,23 @@
 package com.xuantian.compass;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
+import android.text.InputType;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.GridLayout;
+import android.widget.ScrollView;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class XuanKongActivity extends Activity {
 
@@ -27,6 +36,9 @@ public class XuanKongActivity extends Activity {
     private final int WHITE = Color.WHITE;
     private final int GRAY = Color.rgb(150, 140, 125);
 
+    private static final TimeZone BEIJING =
+            TimeZone.getTimeZone("GMT+08:00");
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,15 +49,12 @@ public class XuanKongActivity extends Activity {
         createUI();
 
         try {
-            // 加载离线节气数据
             XuanKongCalculator.initialize(this);
 
-            // 获取当前北京时间对应的节气年份
             currentYear =
                     XuanKongCalculator.getCurrentEffectiveYear();
 
             dataReady = true;
-
             updateChart();
 
         } catch (Exception e) {
@@ -53,8 +62,7 @@ public class XuanKongActivity extends Activity {
             dataReady = false;
 
             infoText.setText(
-                    "节气数据加载失败\n"
-                    + e.getMessage());
+                    "节气数据加载失败\n" + e.getMessage());
 
             centerText.setText("无法排盘");
             grid.removeAllViews();
@@ -68,10 +76,14 @@ public class XuanKongActivity extends Activity {
 
     private void createUI() {
 
+        ScrollView scroll = new ScrollView(this);
+
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
         root.setPadding(dp(18), dp(16), dp(18), dp(16));
+
+        scroll.addView(root);
 
         titleText = new TextView(this);
         titleText.setText("玄空飞星");
@@ -105,7 +117,7 @@ public class XuanKongActivity extends Activity {
         grid.setRowCount(3);
 
         LinearLayout.LayoutParams gridParams =
-                new LinearLayout.LayoutParams(-1, 0, 1f);
+                new LinearLayout.LayoutParams(-1, dp(300));
 
         gridParams.setMargins(dp(5), dp(10), dp(5), dp(10));
 
@@ -173,6 +185,14 @@ public class XuanKongActivity extends Activity {
         root.addView(modeRow,
                 new LinearLayout.LayoutParams(-1, dp(60)));
 
+        // 新增：立春交接测试按钮
+        Button testButton = createButton("立春交接测试");
+
+        testButton.setOnClickListener(v -> showTimeTestDialog());
+
+        root.addView(testButton,
+                new LinearLayout.LayoutParams(-1, dp(55)));
+
         Button backButton = createButton("返回罗盘");
 
         backButton.setOnClickListener(v -> finish());
@@ -182,7 +202,9 @@ public class XuanKongActivity extends Activity {
 
         TextView disclaimer = new TextView(this);
 
-        disclaimer.setText("北京时间 · 立春换年 · 传统术数参考");
+        disclaimer.setText(
+                "北京时间 · 立春换年 · 传统术数参考");
+
         disclaimer.setTextColor(GRAY);
         disclaimer.setTextSize(12);
         disclaimer.setGravity(Gravity.CENTER);
@@ -190,7 +212,7 @@ public class XuanKongActivity extends Activity {
         root.addView(disclaimer,
                 new LinearLayout.LayoutParams(-1, dp(30)));
 
-        setContentView(root);
+        setContentView(scroll);
     }
 
     private Button createButton(String text) {
@@ -200,7 +222,6 @@ public class XuanKongActivity extends Activity {
         button.setText(text);
         button.setTextColor(GOLD);
         button.setTextSize(15);
-
         button.setBackgroundColor(Color.rgb(45, 36, 25));
 
         return button;
@@ -208,18 +229,14 @@ public class XuanKongActivity extends Activity {
 
     private void updateChart() {
 
-        if (!dataReady) {
-            return;
-        }
+        if (!dataReady) return;
 
         XuanKongCalculator.PeriodInfo period =
                 XuanKongCalculator.getPeriod(currentYear);
 
         if (period == null) {
 
-            infoText.setText(
-                    "暂不支持该年份的三元九运计算");
-
+            infoText.setText("暂不支持该年份的三元九运计算");
             centerText.setText("");
             grid.removeAllViews();
 
@@ -354,9 +371,147 @@ public class XuanKongActivity extends Activity {
         params.rowSpec = GridLayout.spec(
                 GridLayout.UNDEFINED, 1f);
 
-        params.setMargins(
-                dp(3), dp(3), dp(3), dp(3));
+        params.setMargins(dp(3), dp(3), dp(3), dp(3));
 
         grid.addView(cell, params);
+    }
+
+    // ==============================
+    // 指定北京时间测试
+    // ==============================
+
+    private void showTimeTestDialog() {
+
+        if (!dataReady) return;
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(20), dp(10), dp(20), dp(5));
+
+        TextView hint = new TextView(this);
+
+        hint.setText(
+                "请输入北京时间\n格式：yyyy-MM-dd HH:mm:ss\n"
+                + "例如：2024-02-04 16:00:00");
+
+        hint.setTextColor(Color.BLACK);
+        hint.setTextSize(15);
+
+        layout.addView(hint);
+
+        EditText input = new EditText(this);
+
+        input.setSingleLine(true);
+        input.setTextSize(16);
+        input.setInputType(InputType.TYPE_CLASS_DATETIME);
+
+        input.setHint("2024-02-04 16:00:00");
+
+        layout.addView(input);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("立春交接测试")
+                .setView(layout)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("开始测试", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+
+            dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+
+                        String value =
+                                input.getText().toString().trim();
+
+                        if (value.isEmpty()) {
+                            input.setError("请输入北京时间");
+                            return;
+                        }
+
+                        runTimeTest(value);
+                        dialog.dismiss();
+                    });
+        });
+
+        dialog.show();
+    }
+
+    private void runTimeTest(String value) {
+
+        try {
+
+            SimpleDateFormat format =
+                    new SimpleDateFormat(
+                            "yyyy-MM-dd HH:mm:ss",
+                            Locale.US);
+
+            format.setLenient(false);
+            format.setTimeZone(BEIJING);
+
+            Date date = format.parse(value);
+
+            if (date == null) {
+                throw new IllegalArgumentException("日期解析失败");
+            }
+
+            long timestamp = date.getTime();
+
+            int effectiveYear =
+                    SolarTermCalculator.getEffectiveYear(
+                            timestamp);
+
+            XuanKongCalculator.PeriodInfo period =
+                    XuanKongCalculator.getPeriodAt(
+                            timestamp);
+
+            int periodCenter =
+                    XuanKongCalculator.getPeriodCenterStarAt(
+                            timestamp);
+
+            int annualCenter =
+                    XuanKongCalculator.getAnnualCenterStarAt(
+                            timestamp);
+
+            if (period == null || periodCenter < 1) {
+                throw new IllegalArgumentException(
+                        "该时间不在当前支持的九运范围内");
+            }
+
+            String result =
+                    "输入北京时间：\n"
+                    + value
+                    + "\n\n节气年份："
+                    + effectiveYear
+                    + "\n所属三元九运："
+                    + period.name
+                    + "\n\n运盘入中："
+                    + periodCenter
+                    + " · "
+                    + XuanKongCalculator.getStarName(
+                            periodCenter)
+                    + "\n流年入中："
+                    + annualCenter
+                    + " · "
+                    + XuanKongCalculator.getStarName(
+                            annualCenter);
+
+            new AlertDialog.Builder(this)
+                    .setTitle("测试结果")
+                    .setMessage(result)
+                    .setPositiveButton("确定", null)
+                    .show();
+
+        } catch (Exception e) {
+
+            new AlertDialog.Builder(this)
+                    .setTitle("测试失败")
+                    .setMessage(
+                            "无法计算该时间：\n"
+                            + e.getMessage())
+                    .setPositiveButton("确定", null)
+                    .show();
+        }
     }
 }
