@@ -1,11 +1,12 @@
 package com.xuantian.compass;
 
+import android.content.Context;
+
 import java.util.Calendar;
-import java.util.Locale;
+import java.util.TimeZone;
 
 public class XuanKongCalculator {
 
-    // 洛书九宫飞行顺序：中、西北、西、东北、南、北、西南、东、东南
     private static final int[] FLY_ORDER = {
             0, 1, 2, 3, 4, 5, 6, 7, 8
     };
@@ -33,6 +34,9 @@ public class XuanKongCalculator {
             "中", "西北", "西", "东北",
             "南", "北", "西南", "东", "东南"
     };
+
+    private static final TimeZone BEIJING_TIME_ZONE =
+            TimeZone.getTimeZone("GMT+08:00");
 
     public static class PeriodInfo {
         public int period;
@@ -73,7 +77,19 @@ public class XuanKongCalculator {
         }
     }
 
-    // 查询年份所属三元九运
+    /**
+     * 初始化离线节气数据。
+     * 应在 Activity 中调用一次。
+     */
+    public static void initialize(Context context) {
+        SolarTermCalculator.load(
+                context.getApplicationContext());
+    }
+
+    /**
+     * 查询年份所属三元九运。
+     * 这里传入的是已经确定的节气年份。
+     */
     public static PeriodInfo getPeriod(int year) {
 
         int[][] periods = {
@@ -117,19 +133,73 @@ public class XuanKongCalculator {
         return null;
     }
 
-    public static int getCurrentYear() {
-        return Calendar.getInstance()
-                .get(Calendar.YEAR);
+    /**
+     * 根据一个北京时间时间戳查询当前九运。
+     */
+    public static PeriodInfo getPeriodAt(
+            long beijingTimestamp) {
+
+        int effectiveYear =
+                SolarTermCalculator.getEffectiveYear(
+                        beijingTimestamp);
+
+        return getPeriod(effectiveYear);
     }
 
-    // 运盘入中星
+    /**
+     * 获取当前北京时间对应的节气年份。
+     */
+    public static int getCurrentEffectiveYear() {
+
+        return SolarTermCalculator
+                .getCurrentEffectiveYear();
+    }
+
+    /**
+     * 获取当前北京时间对应的九运。
+     */
+    public static PeriodInfo getCurrentPeriod() {
+
+        return getPeriodAt(
+                System.currentTimeMillis());
+    }
+
+    /**
+     * 获取北京时间当前公历年份。
+     */
+    public static int getCurrentYear() {
+
+        Calendar calendar = Calendar.getInstance(
+                BEIJING_TIME_ZONE);
+
+        return calendar.get(Calendar.YEAR);
+    }
+
+    /**
+     * 运盘入中星。
+     */
     public static int getPeriodCenterStar(int year) {
+
         PeriodInfo p = getPeriod(year);
+
         return p == null ? -1 : p.period;
     }
 
-    // 流年年盘入中星
-    // 暂按公历年份计算，后续再处理立春换年
+    /**
+     * 根据指定北京时间时刻计算运盘入中星。
+     */
+    public static int getPeriodCenterStarAt(
+            long beijingTimestamp) {
+
+        PeriodInfo p = getPeriodAt(beijingTimestamp);
+
+        return p == null ? -1 : p.period;
+    }
+
+    /**
+     * 流年年盘入中星。
+     * 2024年为三碧入中，之后每年逆行一位。
+     */
     public static int getAnnualCenterStar(int year) {
 
         int difference = year - 2024;
@@ -146,7 +216,32 @@ public class XuanKongCalculator {
         return result;
     }
 
-    // 九宫顺飞
+    /**
+     * 根据北京时间时刻计算流年入中星。
+     * 立春前使用上一节气年份。
+     */
+    public static int getAnnualCenterStarAt(
+            long beijingTimestamp) {
+
+        int effectiveYear =
+                SolarTermCalculator.getEffectiveYear(
+                        beijingTimestamp);
+
+        return getAnnualCenterStar(effectiveYear);
+    }
+
+    /**
+     * 获取当前流年入中星。
+     */
+    public static int getCurrentAnnualCenterStar() {
+
+        return getAnnualCenterStarAt(
+                System.currentTimeMillis());
+    }
+
+    /**
+     * 九宫顺飞。
+     */
     public static int[] flyFromCenter(int centerStar) {
 
         int[] result = new int[9];
@@ -171,7 +266,9 @@ public class XuanKongCalculator {
         return result;
     }
 
-    // 获取运盘
+    /**
+     * 获取运盘。
+     */
     public static FlyingChart getPeriodChart(int year) {
 
         int center = getPeriodCenterStar(year);
@@ -183,12 +280,49 @@ public class XuanKongCalculator {
         return new FlyingChart(center, year);
     }
 
-    // 获取流年盘
+    /**
+     * 根据指定北京时间时刻获取运盘。
+     */
+    public static FlyingChart getPeriodChartAt(
+            long beijingTimestamp) {
+
+        int effectiveYear =
+                SolarTermCalculator.getEffectiveYear(
+                        beijingTimestamp);
+
+        int center = getPeriodCenterStar(effectiveYear);
+
+        if (center < 1) {
+            return null;
+        }
+
+        return new FlyingChart(center, effectiveYear);
+    }
+
+    /**
+     * 获取流年盘。
+     */
     public static FlyingChart getAnnualChart(int year) {
 
         return new FlyingChart(
                 getAnnualCenterStar(year),
                 year
+        );
+    }
+
+    /**
+     * 根据指定北京时间时刻获取流年盘。
+     */
+    public static FlyingChart getAnnualChartAt(
+            long beijingTimestamp) {
+
+        int effectiveYear =
+                SolarTermCalculator.getEffectiveYear(
+                        beijingTimestamp);
+
+        return new FlyingChart(
+                getAnnualCenterStar(effectiveYear),
+                effectiveYear
         );
     }
 
@@ -237,7 +371,9 @@ public class XuanKongCalculator {
         return ELEMENTS[n];
     }
 
-    // 传统九宫格显示
+    /**
+     * 传统九宫格显示。
+     */
     public static String formatChart(FlyingChart chart) {
 
         if (chart == null) {
@@ -246,7 +382,7 @@ public class XuanKongCalculator {
 
         StringBuilder b = new StringBuilder();
 
-        b.append("年份：")
+        b.append("节气年份：")
                 .append(chart.year)
                 .append("\n");
 
@@ -255,11 +391,6 @@ public class XuanKongCalculator {
                 .append(" ")
                 .append(getStarName(chart.centerStar))
                 .append("\n\n");
-
-        // 九宫显示顺序：
-        // 西北、正北、东北
-        // 正西、中宫、正东
-        // 西南、正南、东南
 
         int[][] order = {
                 {1, 5, 3},
