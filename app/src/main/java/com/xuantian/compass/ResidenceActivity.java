@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.view.View;
 
 public class ResidenceActivity extends Activity {
 
@@ -127,7 +128,6 @@ private void createUI() {
 
     backButton.setOnClickListener(v -> finish());
 
-    // 将创建好的界面设置为当前页面
     setContentView(scrollView);
 }
 
@@ -146,6 +146,7 @@ private void addSectionTitle(
 
 /**
  * 创建住宅资料输入框
+ * 输入文字垂直居中，金色横线固定在底部。
  */
 private EditText addInput(
         LinearLayout root,
@@ -160,6 +161,12 @@ private EditText addInput(
 
     root.addView(title);
 
+    // 输入框外层容器
+    LinearLayout inputContainer = new LinearLayout(this);
+    inputContainer.setOrientation(LinearLayout.VERTICAL);
+    inputContainer.setGravity(Gravity.BOTTOM);
+
+    // 输入文字区域
     EditText input = new EditText(this);
     input.setHint(hint);
     input.setHintTextColor(Color.GRAY);
@@ -167,18 +174,31 @@ private EditText addInput(
     input.setTextSize(15);
     input.setSingleLine(true);
 
-    // 保留原来的左右内边距
-    // 不增加上下内边距
+    input.setGravity(Gravity.CENTER_VERTICAL);
     input.setPadding(dp(12), 0, dp(12), 0);
 
-    // 文字垂直居中
-    input.setGravity(Gravity.CENTER_VERTICAL);
+    // 去掉系统默认下划线
+    input.setBackgroundColor(Color.TRANSPARENT);
 
-    input.setBackgroundTintList(
-            android.content.res.ColorStateList.valueOf(gold));
+    // 输入文字区域高度
+    inputContainer.addView(
+            input,
+            new LinearLayout.LayoutParams(
+                    -1, dp(64)));
 
-    // 只增加输入框高度，不改变字体大小
-    root.addView(input, params(-1, 65));
+    // 自定义金色下划线
+    View underline = new View(this);
+    underline.setBackgroundColor(gold);
+
+    inputContainer.addView(
+            underline,
+            new LinearLayout.LayoutParams(
+                    -1, dp(1)));
+
+    // 整体输入框高度65dp
+    root.addView(
+            inputContainer,
+            params(-1, dp(65)));
 
     return input;
 }
