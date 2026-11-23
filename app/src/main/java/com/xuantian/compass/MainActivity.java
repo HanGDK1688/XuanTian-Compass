@@ -7,18 +7,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
-import android.graphics.RectF;
 import android.graphics.Path;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.widget.TextView;
 import android.widget.LinearLayout;
-import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import java.util.Locale;
@@ -31,6 +27,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private float[] gravity = new float[3];
     private float[] magnetic = new float[3];
+
     private boolean hasGravity = false;
     private boolean hasMagnetic = false;
 
@@ -38,7 +35,17 @@ public class MainActivity extends Activity implements SensorEventListener {
     private float pitch = 0;
     private float roll = 0;
 
+    // V1.1 稳定滤波
+    private float filteredAzimuth = 0;
+    private boolean hasFilteredAzimuth = false;
+
+    private static final float DEAD_ZONE = 0.6f;
+    private static final float SLOW_ALPHA = 0.12f;
+    private static final float FAST_ALPHA = 0.45f;
+    private static final float FAST_THRESHOLD = 8.0f;
+
     private CompassView compassView;
+
     private TextView angleText;
     private TextView mountainText;
     private TextView trigramText;
@@ -140,8 +147,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         compassView = new CompassView(this);
 
         LinearLayout.LayoutParams compassParams =
-                new LinearLayout.LayoutParams(
-                        -1, 0, 1f);
+                new LinearLayout.LayoutParams(-1, 0, 1f);
 
         compassParams.setMargins(0, dp(8), 0, dp(8));
 
@@ -195,13 +201,13 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (accelerometer != null) {
             sensorManager.registerListener(
                     this, accelerometer,
-                    SensorManager.SENSOR_DELAY_UI);
+                    SensorManager.SENSOR_DELAY_GAME);
         }
 
         if (magnetometer != null) {
             sensorManager.registerListener(
                     this, magnetometer,
-                    SensorManager.SENSOR_DELAY_UI);
+                    SensorManager.SENSOR_DELAY_GAME);
         }
     }
 
@@ -273,11 +279,52 @@ public class MainActivity extends Activity implements SensorEventListener {
                 float newAzimuth = (float) Math.toDegrees(
                         orientation[0]);
 
-                azimuth = (newAzimuth + 360) % 360;
+                newAzimuth = (newAzimuth + 360) % 360;
 
-                updateDisplay();
+                updateFilteredAzimuth(newAzimuth);
             }
         }
+    }
+
+    // V1.1 核心：方向稳定滤波
+    private void updateFilteredAzimuth(float newAzimuth) {
+
+        if (!hasFilteredAzimuth) {
+            filteredAzimuth = newAzimuth;
+            hasFilteredAzimuth = true;
+        }
+
+        // 计算最短角度差
+        float diff = newAzimuth - filteredAzimuth;
+
+        if (diff > 180) {
+            diff -= 360;
+        } else if (diff < -180) {
+            diff += 360;
+        }
+
+        // 抖动死区
+        if (Math.abs(diff) < DEAD_ZONE) {
+            return;
+        }
+
+        // 动态响应：大转动时快速响应
+        float alpha;
+
+        if (Math.abs(diff) > FAST_THRESHOLD) {
+            alpha = FAST_ALPHA;
+        } else {
+            alpha = SLOW_ALPHA;
+        }
+
+        filteredAzimuth += diff * alpha;
+
+        filteredAzimuth =
+                (filteredAzimuth + 360) % 360;
+
+        azimuth = filteredAzimuth;
+
+        updateDisplay();
     }
 
     private void updateDisplay() {
@@ -334,7 +381,9 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     class CompassView extends View {
 
-        private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private Paint paint =
+                new Paint(Paint.ANTI_ALIAS_FLAG);
+
         private float rotation = 0;
 
         public CompassView(Context context) {
@@ -443,30 +492,27 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
 
             paint.setColor(Color.RED);
-
             paint.setStyle(Paint.Style.FILL);
 
-            PathArrow(canvas, cx, cy, radius);
+            drawArrow(canvas, cx, cy, radius);
 
             canvas.restore();
 
             paint.setColor(Color.WHITE);
-
             paint.setTextSize(dp(20));
-
             paint.setTextAlign(Paint.Align.CENTER);
 
             canvas.drawText("玄天", cx, cy + dp(8), paint);
         }
 
-        private void PathArrow(
-                Canvas canvas, float cx,
-                float cy, float radius) {
+        private void drawArrow(
+                Canvas canvas,
+                float cx,
+                float cy,
+                float radius) {
 
             float top = cy - radius * 0.95f;
-
             float bottom = cy + radius * 0.95f;
-
             float width = radius * 0.08f;
 
             Paint arrowPaint = new Paint(
@@ -477,16 +523,12 @@ public class MainActivity extends Activity implements SensorEventListener {
             Path path = new Path();
 
             path.moveTo(cx, top);
-
             path.lineTo(cx - width, cy);
-
             path.lineTo(cx, bottom);
-
             path.lineTo(cx + width, cy);
-
             path.close();
 
             canvas.drawPath(path, arrowPaint);
         }
     }
-            }
+}
