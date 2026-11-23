@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.RectF;
+import android.graphics.Path;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
