@@ -170,8 +170,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         root.addView(calibration, new LinearLayout.LayoutParams(-1, dp(30)));
 
-        // ===== 新增：玄空飞星入口 =====
-
+        // 玄空飞星入口
         Button xuanKongButton = new Button(this);
         xuanKongButton.setText("玄空飞星排盘");
         xuanKongButton.setTextColor(Color.rgb(20, 17, 14));
@@ -180,9 +179,9 @@ public class MainActivity extends Activity implements SensorEventListener {
         xuanKongButton.setBackgroundColor(Color.rgb(220, 180, 105));
 
         LinearLayout.LayoutParams buttonParams =
-                new LinearLayout.LayoutParams(-1, dp(50));
+                new LinearLayout.LayoutParams(-1, dp(48));
 
-        buttonParams.setMargins(0, dp(8), 0, dp(8));
+        buttonParams.setMargins(0, dp(4), 0, dp(4));
 
         root.addView(xuanKongButton, buttonParams);
 
@@ -193,7 +192,22 @@ public class MainActivity extends Activity implements SensorEventListener {
             startActivity(intent);
         });
 
-        // ===== 新增部分结束 =====
+        // V1.4 住宅风水分析入口
+        Button residenceButton = new Button(this);
+        residenceButton.setText("住宅风水分析");
+        residenceButton.setTextColor(Color.rgb(20, 17, 14));
+        residenceButton.setTextSize(16);
+        residenceButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        residenceButton.setBackgroundColor(Color.rgb(220, 180, 105));
+
+        root.addView(residenceButton, buttonParams);
+
+        residenceButton.setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    ResidenceActivity.class);
+            startActivity(intent);
+        });
 
         if (!sensorAvailable) {
             Toast.makeText(this,
