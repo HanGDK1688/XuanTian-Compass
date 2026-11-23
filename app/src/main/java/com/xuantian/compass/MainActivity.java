@@ -35,7 +35,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private float pitch = 0;
     private float roll = 0;
 
-    // V1.1 稳定滤波
+    // V1.1 方向稳定滤波
     private float filteredAzimuth = 0;
     private boolean hasFilteredAzimuth = false;
 
@@ -286,7 +286,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
     }
 
-    // V1.1 核心：方向稳定滤波
+    // V1.1 方向稳定滤波
     private void updateFilteredAzimuth(float newAzimuth) {
 
         if (!hasFilteredAzimuth) {
@@ -294,7 +294,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             hasFilteredAzimuth = true;
         }
 
-        // 计算最短角度差
         float diff = newAzimuth - filteredAzimuth;
 
         if (diff > 180) {
@@ -303,12 +302,10 @@ public class MainActivity extends Activity implements SensorEventListener {
             diff += 360;
         }
 
-        // 抖动死区
         if (Math.abs(diff) < DEAD_ZONE) {
             return;
         }
 
-        // 动态响应：大转动时快速响应
         float alpha;
 
         if (Math.abs(diff) > FAST_THRESHOLD) {
@@ -379,6 +376,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             Sensor sensor, int accuracy) {
     }
 
+    // V1.2 罗盘绘制
     class CompassView extends View {
 
         private Paint paint =
@@ -424,6 +422,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             canvas.drawCircle(cx, cy,
                     radius * 0.38f, paint);
 
+            // 旋转二十四山盘面
             canvas.rotate(-rotation, cx, cy);
 
             for (int i = 0; i < 360; i += 5) {
@@ -479,24 +478,21 @@ public class MainActivity extends Activity implements SensorEventListener {
                         * textRadius;
 
                 paint.setStyle(Paint.Style.FILL);
-
                 paint.setTextSize(dp(17));
-
                 paint.setTypeface(Typeface.DEFAULT_BOLD);
-
                 paint.setTextAlign(Paint.Align.CENTER);
-
                 paint.setColor(Color.rgb(220, 180, 105));
 
                 canvas.drawText(labels[i], x, y + dp(6), paint);
             }
 
+            canvas.restore();
+
+            // V1.2：固定在屏幕上的红色方向指针
             paint.setColor(Color.RED);
             paint.setStyle(Paint.Style.FILL);
 
             drawArrow(canvas, cx, cy, radius);
-
-            canvas.restore();
 
             paint.setColor(Color.WHITE);
             paint.setTextSize(dp(20));
