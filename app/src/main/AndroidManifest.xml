@@ -15,6 +15,7 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
 
+        <!-- 主罗盘页面 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -26,6 +27,12 @@
             </intent-filter>
 
         </activity>
+
+        <!-- 玄空飞星排盘页面 -->
+        <activity
+            android:name=".XuanKongActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
     </application>
 
