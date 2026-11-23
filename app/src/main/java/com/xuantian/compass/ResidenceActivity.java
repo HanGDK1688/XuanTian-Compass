@@ -6,13 +6,11 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class ResidenceActivity extends Activity {
 
@@ -21,8 +19,8 @@ public class ResidenceActivity extends Activity {
     private EditText houseNameInput;
     private EditText areaInput;
 
-    private int gold = Color.rgb(220, 180, 105);
-    private int background = Color.rgb(20, 17, 14);
+    private final int gold = Color.rgb(220, 180, 105);
+    private final int background = Color.rgb(20, 17, 14);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +35,7 @@ public class ResidenceActivity extends Activity {
     private void createUI() {
 
         ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
         scrollView.setBackgroundColor(background);
 
         LinearLayout root = new LinearLayout(this);
@@ -127,6 +126,9 @@ public class ResidenceActivity extends Activity {
         root.addView(backButton, params(-1, 48));
 
         backButton.setOnClickListener(v -> finish());
+
+        // 关键修复：将创建好的界面设置为当前页面
+        setContentView(scrollView);
     }
 
     private void addSectionTitle(
@@ -183,6 +185,7 @@ public class ResidenceActivity extends Activity {
         }
 
         int year;
+
         try {
             year = Integer.parseInt(yearText);
         } catch (NumberFormatException e) {
@@ -191,7 +194,8 @@ public class ResidenceActivity extends Activity {
         }
 
         if (year < 1900 || year > 2052) {
-            buildingYearInput.setError("目前支持的节气数据范围为1900—2052年");
+            buildingYearInput.setError(
+                    "目前支持的节气数据范围为1900—2052年");
             return;
         }
 
