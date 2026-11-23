@@ -10,12 +10,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.GridLayout;
 
-import java.util.Calendar;
-
 public class XuanKongActivity extends Activity {
 
     private int currentYear;
     private boolean showAnnual = false;
+    private boolean dataReady = false;
 
     private LinearLayout root;
     private TextView titleText;
@@ -35,11 +34,31 @@ public class XuanKongActivity extends Activity {
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
 
-        currentYear = Calendar.getInstance()
-                .get(Calendar.YEAR);
-
         createUI();
-        updateChart();
+
+        try {
+            // 加载离线节气数据
+            XuanKongCalculator.initialize(this);
+
+            // 获取当前北京时间对应的节气年份
+            currentYear =
+                    XuanKongCalculator.getCurrentEffectiveYear();
+
+            dataReady = true;
+
+            updateChart();
+
+        } catch (Exception e) {
+
+            dataReady = false;
+
+            infoText.setText(
+                    "节气数据加载失败\n"
+                    + e.getMessage());
+
+            centerText.setText("无法排盘");
+            grid.removeAllViews();
+        }
     }
 
     private int dp(float value) {
@@ -99,15 +118,23 @@ public class XuanKongActivity extends Activity {
         Button previous = createButton("◀ 上一年");
 
         previous.setOnClickListener(v -> {
-            currentYear--;
-            updateChart();
+            if (!dataReady) return;
+
+            if (currentYear > 1900) {
+                currentYear--;
+                updateChart();
+            }
         });
 
         Button next = createButton("下一年 ▶");
 
         next.setOnClickListener(v -> {
-            currentYear++;
-            updateChart();
+            if (!dataReady) return;
+
+            if (currentYear < 2052) {
+                currentYear++;
+                updateChart();
+            }
         });
 
         yearRow.addView(previous,
@@ -155,7 +182,7 @@ public class XuanKongActivity extends Activity {
 
         TextView disclaimer = new TextView(this);
 
-        disclaimer.setText("玄空飞星基础计算 · 传统术数参考");
+        disclaimer.setText("北京时间 · 立春换年 · 传统术数参考");
         disclaimer.setTextColor(GRAY);
         disclaimer.setTextSize(12);
         disclaimer.setGravity(Gravity.CENTER);
@@ -181,12 +208,18 @@ public class XuanKongActivity extends Activity {
 
     private void updateChart() {
 
+        if (!dataReady) {
+            return;
+        }
+
         XuanKongCalculator.PeriodInfo period =
                 XuanKongCalculator.getPeriod(currentYear);
 
         if (period == null) {
 
-            infoText.setText("暂不支持该年份的三元九运计算");
+            infoText.setText(
+                    "暂不支持该年份的三元九运计算");
+
             centerText.setText("");
             grid.removeAllViews();
 
@@ -197,38 +230,49 @@ public class XuanKongActivity extends Activity {
 
         if (showAnnual) {
 
-            chart = XuanKongCalculator.getAnnualChart(currentYear);
+            chart =
+                    XuanKongCalculator.getAnnualChart(currentYear);
 
             titleText.setText("流年飞星");
 
             infoText.setText(
-                    "公历年份：" + currentYear
+                    "节气年份：" + currentYear
                     + "\n所属：" + period.name
                     + "\n时间：" + period.startYear
                     + "—" + period.endYear);
 
         } else {
 
-            chart = XuanKongCalculator.getPeriodChart(currentYear);
+            chart =
+                    XuanKongCalculator.getPeriodChart(currentYear);
 
             titleText.setText("三元九运");
 
             infoText.setText(
-                    "当前：" + period.name
+                    "节气年份：" + currentYear
+                    + "\n当前：" + period.name
                     + "\n时间：" + period.startYear
-                    + "—" + period.endYear
-                    + "\n年份：" + currentYear);
+                    + "—" + period.endYear);
+        }
+
+        if (chart == null) {
+            infoText.setText("排盘失败，请检查年份");
+            centerText.setText("");
+            grid.removeAllViews();
+            return;
         }
 
         centerText.setText(
                 "中宫：" + chart.centerStar
                 + " · "
-                + XuanKongCalculator.getStarName(chart.centerStar));
+                + XuanKongCalculator.getStarName(
+                        chart.centerStar));
 
         buildGrid(chart);
     }
 
-    private void buildGrid(XuanKongCalculator.FlyingChart chart) {
+    private void buildGrid(
+            XuanKongCalculator.FlyingChart chart) {
 
         grid.removeAllViews();
 
@@ -260,7 +304,9 @@ public class XuanKongActivity extends Activity {
 
         TextView palace = new TextView(this);
 
-        palace.setText(XuanKongCalculator.getPalaceName(index));
+        palace.setText(
+                XuanKongCalculator.getPalaceName(index));
+
         palace.setTextColor(GOLD);
         palace.setTextSize(13);
         palace.setGravity(Gravity.CENTER);
@@ -275,14 +321,18 @@ public class XuanKongActivity extends Activity {
 
         TextView starName = new TextView(this);
 
-        starName.setText(XuanKongCalculator.getStarName(star));
+        starName.setText(
+                XuanKongCalculator.getStarName(star));
+
         starName.setTextColor(GOLD);
         starName.setTextSize(12);
         starName.setGravity(Gravity.CENTER);
 
         TextView element = new TextView(this);
 
-        element.setText(XuanKongCalculator.getElement(star) + "五行");
+        element.setText(
+                XuanKongCalculator.getElement(star) + "五行");
+
         element.setTextColor(GRAY);
         element.setTextSize(12);
         element.setGravity(Gravity.CENTER);
@@ -292,7 +342,8 @@ public class XuanKongActivity extends Activity {
         cell.addView(starName);
         cell.addView(element);
 
-        GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+        GridLayout.LayoutParams params =
+                new GridLayout.LayoutParams();
 
         params.width = 0;
         params.height = 0;
@@ -303,7 +354,8 @@ public class XuanKongActivity extends Activity {
         params.rowSpec = GridLayout.spec(
                 GridLayout.UNDEFINED, 1f);
 
-        params.setMargins(dp(3), dp(3), dp(3), dp(3));
+        params.setMargins(
+                dp(3), dp(3), dp(3), dp(3));
 
         grid.addView(cell, params);
     }
