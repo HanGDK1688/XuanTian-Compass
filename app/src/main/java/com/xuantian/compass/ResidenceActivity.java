@@ -144,6 +144,9 @@ private void addSectionTitle(
     root.addView(title);
 }
 
+/**
+ * 创建住宅资料输入框
+ */
 private EditText addInput(
         LinearLayout root,
         String label,
@@ -164,15 +167,17 @@ private EditText addInput(
     input.setTextSize(15);
     input.setSingleLine(true);
 
-    // 输入框文字垂直居中，并增加上下内边距
+    // 保留原来的左右内边距
+    // 不增加上下内边距
+    input.setPadding(dp(12), 0, dp(12), 0);
+
+    // 文字垂直居中
     input.setGravity(Gravity.CENTER_VERTICAL);
-    input.setPadding(dp(12), dp(8), dp(12), dp(8));
-    input.setMinHeight(dp(65));
 
     input.setBackgroundTintList(
             android.content.res.ColorStateList.valueOf(gold));
 
-    // 输入框高度调整为65dp
+    // 只增加输入框高度，不改变字体大小
     root.addView(input, params(-1, 65));
 
     return input;
