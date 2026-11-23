@@ -3,6 +3,7 @@ package com.xuantian.compass;
 import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -15,6 +16,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.widget.TextView;
 import android.widget.LinearLayout;
+import android.widget.Button;
 import android.widget.Toast;
 import java.util.Locale;
 
@@ -88,6 +90,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void createUI() {
+
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(20, 17, 14));
@@ -166,6 +169,31 @@ public class MainActivity extends Activity implements SensorEventListener {
         calibration.setGravity(android.view.Gravity.CENTER);
 
         root.addView(calibration, new LinearLayout.LayoutParams(-1, dp(30)));
+
+        // ===== 新增：玄空飞星入口 =====
+
+        Button xuanKongButton = new Button(this);
+        xuanKongButton.setText("玄空飞星排盘");
+        xuanKongButton.setTextColor(Color.rgb(20, 17, 14));
+        xuanKongButton.setTextSize(16);
+        xuanKongButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        xuanKongButton.setBackgroundColor(Color.rgb(220, 180, 105));
+
+        LinearLayout.LayoutParams buttonParams =
+                new LinearLayout.LayoutParams(-1, dp(50));
+
+        buttonParams.setMargins(0, dp(8), 0, dp(8));
+
+        root.addView(xuanKongButton, buttonParams);
+
+        xuanKongButton.setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    XuanKongActivity.class);
+            startActivity(intent);
+        });
+
+        // ===== 新增部分结束 =====
 
         if (!sensorAvailable) {
             Toast.makeText(this,
@@ -388,7 +416,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             canvas.drawCircle(cx, cy, radius * 0.60f, paint);
             canvas.drawCircle(cx, cy, radius * 0.38f, paint);
 
-            // 只旋转刻度和二十四山文字，不旋转固定指针
             canvas.rotate(-rotation, cx, cy);
 
             for (int i = 0; i < 360; i += 5) {
@@ -438,10 +465,8 @@ public class MainActivity extends Activity implements SensorEventListener {
                 canvas.drawText(labels[i], x, y + dp(6), paint);
             }
 
-            // 结束盘面旋转：从这里开始，后面的指针固定在屏幕上
             canvas.restore();
 
-            // 固定指针，不跟随罗盘刻度旋转
             paint.setColor(Color.RED);
             paint.setStyle(Paint.Style.FILL);
 
