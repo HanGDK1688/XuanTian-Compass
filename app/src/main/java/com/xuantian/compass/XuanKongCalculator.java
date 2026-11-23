@@ -5,75 +5,43 @@ import java.util.Locale;
 
 public class XuanKongCalculator {
 
-    // 洛书九宫顺飞顺序
-    // 中、乾、兑、艮、离、坎、坤、震、巽
+    // 洛书九宫飞行顺序：中、西北、西、东北、南、北、西南、东、东南
     private static final int[] FLY_ORDER = {
-            4, 5, 6, 7, 8, 9, 1, 2, 3
+            0, 1, 2, 3, 4, 5, 6, 7, 8
     };
 
     private static final String[] PALACE_NAMES = {
-            "中宫",
-            "西北乾宫",
-            "西方兑宫",
-            "东北艮宫",
-            "南方离宫",
-            "北方坎宫",
-            "西南坤宫",
-            "东方震宫",
-            "东南巽宫"
+            "中宫", "西北乾宫", "西方兑宫",
+            "东北艮宫", "南方离宫", "北方坎宫",
+            "西南坤宫", "东方震宫", "东南巽宫"
     };
 
     private static final String[] STAR_NAMES = {
             "",
-            "一白贪狼",
-            "二黑巨门",
-            "三碧禄存",
-            "四绿文曲",
-            "五黄廉贞",
-            "六白武曲",
-            "七赤破军",
-            "八白左辅",
-            "九紫右弼"
+            "一白贪狼", "二黑巨门", "三碧禄存",
+            "四绿文曲", "五黄廉贞", "六白武曲",
+            "七赤破军", "八白左辅", "九紫右弼"
     };
 
     private static final String[] ELEMENTS = {
             "",
-            "水",
-            "土",
-            "木",
-            "木",
-            "土",
-            "金",
-            "金",
-            "土",
-            "火"
+            "水", "土", "木", "木", "土",
+            "金", "金", "土", "火"
     };
 
     private static final String[] DIRECTIONS = {
-            "中",
-            "西北",
-            "西",
-            "东北",
-            "南",
-            "北",
-            "西南",
-            "东",
-            "东南"
+            "中", "西北", "西", "东北",
+            "南", "北", "西南", "东", "东南"
     };
 
     public static class PeriodInfo {
-
         public int period;
         public int startYear;
         public int endYear;
         public String name;
 
-        public PeriodInfo(
-                int period,
-                int startYear,
-                int endYear,
-                String name) {
-
+        public PeriodInfo(int period, int startYear,
+                          int endYear, String name) {
             this.period = period;
             this.startYear = startYear;
             this.endYear = endYear;
@@ -82,13 +50,11 @@ public class XuanKongCalculator {
     }
 
     public static class StarInfo {
-
         public int number;
         public String name;
         public String element;
 
         public StarInfo(int number) {
-
             this.number = number;
             this.name = STAR_NAMES[number];
             this.element = ELEMENTS[number];
@@ -96,22 +62,18 @@ public class XuanKongCalculator {
     }
 
     public static class FlyingChart {
-
         public int centerStar;
         public int[] palaceStars;
         public int year;
 
         public FlyingChart(int centerStar, int year) {
-
             this.centerStar = centerStar;
             this.year = year;
-
-            this.palaceStars =
-                    flyFromCenter(centerStar);
+            this.palaceStars = flyFromCenter(centerStar);
         }
     }
 
-    // 获取三元九运
+    // 查询年份所属三元九运
     public static PeriodInfo getPeriod(int year) {
 
         int[][] periods = {
@@ -131,20 +93,20 @@ public class XuanKongCalculator {
             if (year >= periods[i][0]
                     && year <= periods[i][1]) {
 
-                int number = i + 1;
+                int n = i + 1;
 
                 String name;
 
-                if (number <= 3) {
-                    name = "上元第" + number + "运";
-                } else if (number <= 6) {
-                    name = "中元第" + (number - 3) + "运";
+                if (n <= 3) {
+                    name = "上元第" + n + "运";
+                } else if (n <= 6) {
+                    name = "中元第" + (n - 3) + "运";
                 } else {
-                    name = "下元第" + (number - 6) + "运";
+                    name = "下元第" + (n - 6) + "运";
                 }
 
                 return new PeriodInfo(
-                        number,
+                        n,
                         periods[i][0],
                         periods[i][1],
                         name
@@ -155,31 +117,22 @@ public class XuanKongCalculator {
         return null;
     }
 
-    // 获取当前年份
     public static int getCurrentYear() {
-
         return Calendar.getInstance()
                 .get(Calendar.YEAR);
     }
 
-    // 获取运星入中
+    // 运盘入中星
     public static int getPeriodCenterStar(int year) {
-
-        PeriodInfo info = getPeriod(year);
-
-        if (info == null) {
-            return -1;
-        }
-
-        return info.period;
+        PeriodInfo p = getPeriod(year);
+        return p == null ? -1 : p.period;
     }
 
-    // 获取流年年星入中
-    // 以2024年九运三碧入中为基准
+    // 流年年盘入中星
+    // 暂按公历年份计算，后续再处理立春换年
     public static int getAnnualCenterStar(int year) {
 
         int difference = year - 2024;
-
         int result = 3 - difference;
 
         while (result > 9) {
@@ -193,7 +146,7 @@ public class XuanKongCalculator {
         return result;
     }
 
-    // 从中宫起星，按洛书顺序飞布
+    // 九宫顺飞
     public static int[] flyFromCenter(int centerStar) {
 
         int[] result = new int[9];
@@ -204,7 +157,7 @@ public class XuanKongCalculator {
 
         for (int i = 0; i < FLY_ORDER.length; i++) {
 
-            int palace = FLY_ORDER[i];
+            int palaceIndex = FLY_ORDER[i];
 
             int star = centerStar + i;
 
@@ -212,7 +165,7 @@ public class XuanKongCalculator {
                 star -= 9;
             }
 
-            result[palace - 1] = star;
+            result[palaceIndex] = star;
         }
 
         return result;
@@ -233,22 +186,21 @@ public class XuanKongCalculator {
     // 获取流年盘
     public static FlyingChart getAnnualChart(int year) {
 
-        int center = getAnnualCenterStar(year);
-
-        return new FlyingChart(center, year);
+        return new FlyingChart(
+                getAnnualCenterStar(year),
+                year
+        );
     }
 
-    // 获取九宫星曜信息
-    public static StarInfo getStarInfo(int number) {
+    public static StarInfo getStarInfo(int n) {
 
-        if (number < 1 || number > 9) {
+        if (n < 1 || n > 9) {
             return null;
         }
 
-        return new StarInfo(number);
+        return new StarInfo(n);
     }
 
-    // 获取宫位名称
     public static String getPalaceName(int index) {
 
         if (index < 0 || index >= 9) {
@@ -258,7 +210,6 @@ public class XuanKongCalculator {
         return PALACE_NAMES[index];
     }
 
-    // 获取宫位方向
     public static String getDirection(int index) {
 
         if (index < 0 || index >= 9) {
@@ -268,70 +219,71 @@ public class XuanKongCalculator {
         return DIRECTIONS[index];
     }
 
-    // 获取星曜名称
-    public static String getStarName(int number) {
+    public static String getStarName(int n) {
 
-        if (number < 1 || number > 9) {
+        if (n < 1 || n > 9) {
             return "";
         }
 
-        return STAR_NAMES[number];
+        return STAR_NAMES[n];
     }
 
-    // 获取星曜五行
-    public static String getElement(int number) {
+    public static String getElement(int n) {
 
-        if (number < 1 || number > 9) {
+        if (n < 1 || n > 9) {
             return "";
         }
 
-        return ELEMENTS[number];
+        return ELEMENTS[n];
     }
 
-    // 九宫飞星格式化输出
+    // 传统九宫格显示
     public static String formatChart(FlyingChart chart) {
 
         if (chart == null) {
             return "暂无排盘数据";
         }
 
-        StringBuilder builder = new StringBuilder();
+        StringBuilder b = new StringBuilder();
 
-        builder.append("年份：")
+        b.append("年份：")
                 .append(chart.year)
                 .append("\n");
 
-        builder.append("中宫：")
+        b.append("中宫入中星：")
                 .append(chart.centerStar)
                 .append(" ")
                 .append(getStarName(chart.centerStar))
                 .append("\n\n");
 
-        int[][] displayOrder = {
-                {3, 8, 1},
-                {2, 4, 6},
-                {7, 0, 5}
+        // 九宫显示顺序：
+        // 西北、正北、东北
+        // 正西、中宫、正东
+        // 西南、正南、东南
+
+        int[][] order = {
+                {1, 5, 3},
+                {2, 0, 7},
+                {6, 4, 8}
         };
 
-        for (int[] row : displayOrder) {
+        for (int[] row : order) {
 
             for (int index : row) {
 
                 int star = chart.palaceStars[index];
 
-                builder.append(String.format(
-                        Locale.CHINA,
-                        "%s：%d",
-                        getPalaceName(index),
-                        star
-                ));
-
-                builder.append("  ");
+                b.append(getPalaceName(index))
+                        .append("：")
+                        .append(star)
+                        .append(" ")
+                        .append(getStarName(star))
+                        .append("    ");
             }
 
-            builder.append("\n");
+            b.append("\n");
         }
 
-        return builder.toString();
+        return b.toString();
     }
 }
