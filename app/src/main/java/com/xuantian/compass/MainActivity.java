@@ -16,7 +16,6 @@ import android.hardware.SensorManager;
 import android.widget.TextView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
-
 import java.util.Locale;
 
 public class MainActivity extends Activity implements SensorEventListener {
@@ -35,7 +34,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     private float pitch = 0;
     private float roll = 0;
 
-    // V1.1 稳定滤波
     private float filteredAzimuth = 0;
     private boolean hasFilteredAzimuth = false;
 
@@ -45,7 +43,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     private static final float FAST_THRESHOLD = 8.0f;
 
     private CompassView compassView;
-
     private TextView angleText;
     private TextView mountainText;
     private TextView trigramText;
@@ -91,7 +88,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void createUI() {
-
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(20, 17, 14));
@@ -104,8 +100,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         title.setGravity(android.view.Gravity.CENTER);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
 
-        root.addView(title, new LinearLayout.LayoutParams(
-                -1, dp(50)));
+        root.addView(title, new LinearLayout.LayoutParams(-1, dp(50)));
 
         TextView subtitle = new TextView(this);
         subtitle.setText("传统二十四山 · 八卦定位");
@@ -113,8 +108,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         subtitle.setTextSize(13);
         subtitle.setGravity(android.view.Gravity.CENTER);
 
-        root.addView(subtitle, new LinearLayout.LayoutParams(
-                -1, dp(30)));
+        root.addView(subtitle, new LinearLayout.LayoutParams(-1, dp(30)));
 
         angleText = new TextView(this);
         angleText.setText("0.0°");
@@ -123,8 +117,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         angleText.setGravity(android.view.Gravity.CENTER);
         angleText.setTypeface(Typeface.MONOSPACE);
 
-        root.addView(angleText, new LinearLayout.LayoutParams(
-                -1, dp(65)));
+        root.addView(angleText, new LinearLayout.LayoutParams(-1, dp(65)));
 
         mountainText = new TextView(this);
         mountainText.setText("子山");
@@ -132,8 +125,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         mountainText.setTextSize(26);
         mountainText.setGravity(android.view.Gravity.CENTER);
 
-        root.addView(mountainText, new LinearLayout.LayoutParams(
-                -1, dp(45)));
+        root.addView(mountainText, new LinearLayout.LayoutParams(-1, dp(45)));
 
         trigramText = new TextView(this);
         trigramText.setText("坎卦 · 北方");
@@ -141,14 +133,12 @@ public class MainActivity extends Activity implements SensorEventListener {
         trigramText.setTextSize(18);
         trigramText.setGravity(android.view.Gravity.CENTER);
 
-        root.addView(trigramText, new LinearLayout.LayoutParams(
-                -1, dp(35)));
+        root.addView(trigramText, new LinearLayout.LayoutParams(-1, dp(35)));
 
         compassView = new CompassView(this);
 
         LinearLayout.LayoutParams compassParams =
                 new LinearLayout.LayoutParams(-1, 0, 1f);
-
         compassParams.setMargins(0, dp(8), 0, dp(8));
 
         root.addView(compassView, compassParams);
@@ -159,8 +149,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         levelText.setTextSize(15);
         levelText.setGravity(android.view.Gravity.CENTER);
 
-        root.addView(levelText, new LinearLayout.LayoutParams(
-                -1, dp(35)));
+        root.addView(levelText, new LinearLayout.LayoutParams(-1, dp(35)));
 
         magneticText = new TextView(this);
         magneticText.setText("磁场：等待检测");
@@ -168,8 +157,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         magneticText.setTextSize(13);
         magneticText.setGravity(android.view.Gravity.CENTER);
 
-        root.addView(magneticText, new LinearLayout.LayoutParams(
-                -1, dp(30)));
+        root.addView(magneticText, new LinearLayout.LayoutParams(-1, dp(30)));
 
         TextView calibration = new TextView(this);
         calibration.setText("校准方法：手机呈8字形移动");
@@ -177,8 +165,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         calibration.setTextSize(13);
         calibration.setGravity(android.view.Gravity.CENTER);
 
-        root.addView(calibration, new LinearLayout.LayoutParams(
-                -1, dp(30)));
+        root.addView(calibration, new LinearLayout.LayoutParams(-1, dp(30)));
 
         if (!sensorAvailable) {
             Toast.makeText(this,
@@ -220,8 +207,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
 
-        if (event.sensor.getType() ==
-                Sensor.TYPE_ACCELEROMETER) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 
             gravity = event.values.clone();
             hasGravity = true;
@@ -235,8 +221,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                     Math.atan2(gravity[1], gravity[2]));
         }
 
-        if (event.sensor.getType() ==
-                Sensor.TYPE_MAGNETIC_FIELD) {
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
 
             magnetic = event.values.clone();
             hasMagnetic = true;
@@ -255,10 +240,8 @@ public class MainActivity extends Activity implements SensorEventListener {
             } else {
                 magneticText.setText(
                         String.format(Locale.CHINA,
-                                "磁场正常：%.1f μT",
-                                strength));
-                magneticText.setTextColor(
-                        Color.rgb(130, 190, 130));
+                                "磁场正常：%.1f μT", strength));
+                magneticText.setTextColor(Color.rgb(130, 190, 130));
             }
         }
 
@@ -272,13 +255,9 @@ public class MainActivity extends Activity implements SensorEventListener {
                     R, I, gravity, magnetic);
 
             if (success) {
+                SensorManager.getOrientation(R, orientation);
 
-                SensorManager.getOrientation(
-                        R, orientation);
-
-                float newAzimuth = (float) Math.toDegrees(
-                        orientation[0]);
-
+                float newAzimuth = (float) Math.toDegrees(orientation[0]);
                 newAzimuth = (newAzimuth + 360) % 360;
 
                 updateFilteredAzimuth(newAzimuth);
@@ -286,7 +265,6 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
     }
 
-    // V1.1 核心：方向稳定滤波
     private void updateFilteredAzimuth(float newAzimuth) {
 
         if (!hasFilteredAzimuth) {
@@ -294,7 +272,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             hasFilteredAzimuth = true;
         }
 
-        // 计算最短角度差
         float diff = newAzimuth - filteredAzimuth;
 
         if (diff > 180) {
@@ -303,12 +280,10 @@ public class MainActivity extends Activity implements SensorEventListener {
             diff += 360;
         }
 
-        // 抖动死区
         if (Math.abs(diff) < DEAD_ZONE) {
             return;
         }
 
-        // 动态响应：大转动时快速响应
         float alpha;
 
         if (Math.abs(diff) > FAST_THRESHOLD) {
@@ -318,9 +293,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
 
         filteredAzimuth += diff * alpha;
-
-        filteredAzimuth =
-                (filteredAzimuth + 360) % 360;
+        filteredAzimuth = (filteredAzimuth + 360) % 360;
 
         azimuth = filteredAzimuth;
 
@@ -337,8 +310,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         mountainText.setText(mountains[index] + "山");
 
         trigramText.setText(
-                trigrams[index] + "卦 · " +
-                        getDirection(azimuth));
+                trigrams[index] + "卦 · " + getDirection(azimuth));
 
         compassView.setAzimuth(azimuth);
 
@@ -375,15 +347,12 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     @Override
-    public void onAccuracyChanged(
-            Sensor sensor, int accuracy) {
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
     }
 
     class CompassView extends View {
 
-        private Paint paint =
-                new Paint(Paint.ANTI_ALIAS_FLAG);
-
+        private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private float rotation = 0;
 
         public CompassView(Context context) {
@@ -415,23 +384,17 @@ public class MainActivity extends Activity implements SensorEventListener {
 
             paint.setStrokeWidth(dp(1));
 
-            canvas.drawCircle(cx, cy,
-                    radius * 0.82f, paint);
+            canvas.drawCircle(cx, cy, radius * 0.82f, paint);
+            canvas.drawCircle(cx, cy, radius * 0.60f, paint);
+            canvas.drawCircle(cx, cy, radius * 0.38f, paint);
 
-            canvas.drawCircle(cx, cy,
-                    radius * 0.60f, paint);
-
-            canvas.drawCircle(cx, cy,
-                    radius * 0.38f, paint);
-
+            // 只旋转刻度和二十四山文字，不旋转固定指针
             canvas.rotate(-rotation, cx, cy);
 
             for (int i = 0; i < 360; i += 5) {
 
                 float angle = (float) Math.toRadians(i - 90);
-
                 float startRadius = radius * 0.84f;
-
                 float endRadius;
 
                 if (i % 30 == 0)
@@ -441,20 +404,13 @@ public class MainActivity extends Activity implements SensorEventListener {
                 else
                     endRadius = radius * 0.87f;
 
-                float x1 = cx + (float) Math.cos(angle)
-                        * startRadius;
+                float x1 = cx + (float) Math.cos(angle) * startRadius;
+                float y1 = cy + (float) Math.sin(angle) * startRadius;
 
-                float y1 = cy + (float) Math.sin(angle)
-                        * startRadius;
-
-                float x2 = cx + (float) Math.cos(angle)
-                        * endRadius;
-
-                float y2 = cy + (float) Math.sin(angle)
-                        * endRadius;
+                float x2 = cx + (float) Math.cos(angle) * endRadius;
+                float y2 = cy + (float) Math.sin(angle) * endRadius;
 
                 paint.setStrokeWidth(dp(1));
-
                 canvas.drawLine(x1, y1, x2, y2, paint);
             }
 
@@ -467,36 +423,29 @@ public class MainActivity extends Activity implements SensorEventListener {
 
             for (int i = 0; i < 24; i++) {
 
-                float angle = (float) Math.toRadians(
-                        i * 15 - 90);
-
+                float angle = (float) Math.toRadians(i * 15 - 90);
                 float textRadius = radius * 0.72f;
 
-                float x = cx + (float) Math.cos(angle)
-                        * textRadius;
-
-                float y = cy + (float) Math.sin(angle)
-                        * textRadius;
+                float x = cx + (float) Math.cos(angle) * textRadius;
+                float y = cy + (float) Math.sin(angle) * textRadius;
 
                 paint.setStyle(Paint.Style.FILL);
-
                 paint.setTextSize(dp(17));
-
                 paint.setTypeface(Typeface.DEFAULT_BOLD);
-
                 paint.setTextAlign(Paint.Align.CENTER);
-
                 paint.setColor(Color.rgb(220, 180, 105));
 
                 canvas.drawText(labels[i], x, y + dp(6), paint);
             }
 
+            // 结束盘面旋转：从这里开始，后面的指针固定在屏幕上
+            canvas.restore();
+
+            // 固定指针，不跟随罗盘刻度旋转
             paint.setColor(Color.RED);
             paint.setStyle(Paint.Style.FILL);
 
             drawArrow(canvas, cx, cy, radius);
-
-            canvas.restore();
 
             paint.setColor(Color.WHITE);
             paint.setTextSize(dp(20));
@@ -515,9 +464,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             float bottom = cy + radius * 0.95f;
             float width = radius * 0.08f;
 
-            Paint arrowPaint = new Paint(
-                    Paint.ANTI_ALIAS_FLAG);
-
+            Paint arrowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             arrowPaint.setColor(Color.RED);
 
             Path path = new Path();
