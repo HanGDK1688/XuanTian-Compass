@@ -12,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.view.View;
+import android.widget.Toast;
 
 public class ResidenceActivity extends Activity {
 
@@ -19,6 +20,8 @@ private EditText buildingYearInput;
 private EditText floorInput;
 private EditText houseNameInput;
 private EditText areaInput;
+
+private ResidenceStorage residenceStorage;
 
 private final int gold = Color.rgb(220, 180, 105);
 private final int background = Color.rgb(20, 17, 14);
@@ -30,7 +33,18 @@ protected void onCreate(Bundle savedInstanceState) {
     getWindow().setStatusBarColor(background);
     getWindow().setNavigationBarColor(background);
 
+    residenceStorage = new ResidenceStorage(this);
+
     createUI();
+}
+
+@Override
+protected void onDestroy() {
+    super.onDestroy();
+
+    if (residenceStorage != null) {
+        residenceStorage.close();
+    }
 }
 
 private void createUI() {
@@ -109,6 +123,7 @@ private void createUI() {
 
     root.addView(methodInfo);
 
+    // 检查资料按钮
     Button confirmButton = new Button(this);
     confirmButton.setText("检查住宅资料");
     confirmButton.setTextColor(background);
@@ -121,6 +136,20 @@ private void createUI() {
 
     confirmButton.setOnClickListener(v -> checkInformation());
 
+    // 保存资料按钮
+    Button saveButton = new Button(this);
+    saveButton.setText("保存住宅资料");
+    saveButton.setTextColor(background);
+    saveButton.setTextSize(16);
+    saveButton.setTypeface(null, Typeface.BOLD);
+    saveButton.setBackgroundTintList(
+            android.content.res.ColorStateList.valueOf(gold));
+
+    root.addView(saveButton, params(-1, 52));
+
+    saveButton.setOnClickListener(v -> saveInformation());
+
+    // 返回首页按钮
     Button backButton = new Button(this);
     backButton.setText("返回罗盘首页");
 
@@ -161,41 +190,31 @@ private EditText addInput(
 
     root.addView(title);
 
-    // 输入框外层容器
     LinearLayout inputContainer = new LinearLayout(this);
     inputContainer.setOrientation(LinearLayout.VERTICAL);
     inputContainer.setGravity(Gravity.BOTTOM);
 
-    // 输入文字区域
     EditText input = new EditText(this);
     input.setHint(hint);
     input.setHintTextColor(Color.GRAY);
     input.setTextColor(Color.WHITE);
     input.setTextSize(15);
     input.setSingleLine(true);
-
     input.setGravity(Gravity.CENTER_VERTICAL);
     input.setPadding(dp(12), 0, dp(12), 0);
-
-    // 去掉系统默认下划线
     input.setBackgroundColor(Color.TRANSPARENT);
 
-    // 输入文字区域高度
     inputContainer.addView(
             input,
-            new LinearLayout.LayoutParams(
-                    -1, dp(64)));
+            new LinearLayout.LayoutParams(-1, dp(64)));
 
-    // 自定义金色下划线
     View underline = new View(this);
     underline.setBackgroundColor(gold);
 
     inputContainer.addView(
             underline,
-            new LinearLayout.LayoutParams(
-                    -1, dp(1)));
+            new LinearLayout.LayoutParams(-1, dp(1)));
 
-    // 整体输入框高度65dp
     root.addView(
             inputContainer,
             params(-1, dp(65)));
@@ -203,6 +222,9 @@ private EditText addInput(
     return input;
 }
 
+/**
+ * 检查住宅资料
+ */
 private void checkInformation() {
 
     String name = houseNameInput.getText().toString().trim();
@@ -240,11 +262,25 @@ private void checkInformation() {
         return;
     }
 
+    double area;
+
+    try {
+        area = Double.parseDouble(areaText);
+    } catch (NumberFormatException e) {
+        areaInput.setError("面积必须是数字");
+        return;
+    }
+
+    if (area <= 0) {
+        areaInput.setError("住宅面积必须大于0");
+        return;
+    }
+
     String summary =
             "住宅名称：" + (name.isEmpty() ? "未填写" : name) +
             "\n建造年份：" + year +
             "\n所在楼层：" + floorText +
-            "\n住宅面积：" + areaText + " 平方米" +
+            "\n住宅面积：" + area + " 平方米" +
             "\n\n资料检查通过。";
 
     new AlertDialog.Builder(this)
@@ -252,6 +288,104 @@ private void checkInformation() {
             .setMessage(summary)
             .setPositiveButton("确定", null)
             .show();
+}
+
+/**
+ * 保存住宅资料到手机本地数据库
+ */
+private void saveInformation() {
+
+    String name = houseNameInput.getText().toString().trim();
+    String yearText = buildingYearInput.getText().toString().trim();
+    String floorText = floorInput.getText().toString().trim();
+    String areaText = areaInput.getText().toString().trim();
+
+    if (yearText.isEmpty()) {
+        buildingYearInput.setError("请输入建造年份");
+        buildingYearInput.requestFocus();
+        return;
+    }
+
+    int year;
+
+    try {
+        year = Integer.parseInt(yearText);
+    } catch (NumberFormatException e) {
+        buildingYearInput.setError("年份必须是数字");
+        buildingYearInput.requestFocus();
+        return;
+    }
+
+    if (year < 1900 || year > 2052) {
+        buildingYearInput.setError(
+                "目前支持的节气数据范围为1900—2052年");
+        buildingYearInput.requestFocus();
+        return;
+    }
+
+    if (floorText.isEmpty()) {
+        floorInput.setError("请输入所在楼层");
+        floorInput.requestFocus();
+        return;
+    }
+
+    if (areaText.isEmpty()) {
+        areaInput.setError("请输入住宅面积");
+        areaInput.requestFocus();
+        return;
+    }
+
+    double area;
+
+    try {
+        area = Double.parseDouble(areaText);
+    } catch (NumberFormatException e) {
+        areaInput.setError("面积必须是数字");
+        areaInput.requestFocus();
+        return;
+    }
+
+    if (area <= 0) {
+        areaInput.setError("住宅面积必须大于0");
+        areaInput.requestFocus();
+        return;
+    }
+
+    if (name.isEmpty()) {
+        name = "未命名住宅";
+    }
+
+    ResidenceData data = new ResidenceData();
+
+    data.name = name;
+    data.buildingYear = year;
+    data.floor = floorText;
+    data.area = area;
+
+    long result = residenceStorage.insert(data);
+
+    if (result > 0) {
+
+        new AlertDialog.Builder(this)
+                .setTitle("保存成功")
+                .setMessage(
+                        "住宅资料已经保存到手机本地数据库。\n\n" +
+                        "住宅名称：" + name +
+                        "\n建造年份：" + year +
+                        "\n所在楼层：" + floorText +
+                        "\n住宅面积：" + area + " 平方米" +
+                        "\n\n档案编号：" + result)
+                .setPositiveButton("确定", null)
+                .show();
+
+    } else {
+
+        Toast.makeText(
+                this,
+                "保存失败，请检查后重试",
+                Toast.LENGTH_LONG
+        ).show();
+    }
 }
 
 private LinearLayout.LayoutParams params(
