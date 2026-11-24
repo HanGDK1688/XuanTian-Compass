@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.content.res.ColorStateList;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
@@ -63,15 +62,16 @@ private void createUI() {
 
     scrollView.addView(root);
 
-    // 主标题
+    // 页面主标题
     TextView title = new TextView(this);
     title.setText("住宅风水分析");
     title.setTextColor(gold);
     title.setTextSize(25);
     title.setGravity(Gravity.CENTER);
     title.setTypeface(null, Typeface.BOLD);
+    title.setIncludeFontPadding(true);
 
-    root.addView(title, params(-1, 55));
+    root.addView(title, params(-1, 60));
 
     // 副标题
     TextView subtitle = new TextView(this);
@@ -79,8 +79,9 @@ private void createUI() {
     subtitle.setTextColor(Color.LTGRAY);
     subtitle.setTextSize(14);
     subtitle.setGravity(Gravity.CENTER);
+    subtitle.setIncludeFontPadding(true);
 
-    root.addView(subtitle, params(-1, 35));
+    root.addView(subtitle, params(-1, 40));
 
     // 第一部分
     addSectionTitle(root, "一、住宅基本信息");
@@ -109,7 +110,7 @@ private void createUI() {
 
     styleInfoText(directionInfo);
 
-    root.addView(directionInfo);
+    root.addView(directionInfo, params(-1, -2));
 
     // 第三部分
     addSectionTitle(root, "三、排盘说明");
@@ -127,9 +128,9 @@ private void createUI() {
 
     styleInfoText(methodInfo);
 
-    root.addView(methodInfo);
+    root.addView(methodInfo, params(-1, -2));
 
-    // 功能区域
+    // 第四部分
     addSectionTitle(root, "四、住宅资料管理");
 
     // 检查按钮
@@ -139,7 +140,7 @@ private void createUI() {
             background
     );
 
-    root.addView(checkButton, params(-1, 54));
+    root.addView(checkButton, params(-1, 56));
 
     checkButton.setOnClickListener(v -> checkInformation());
 
@@ -150,7 +151,7 @@ private void createUI() {
             background
     );
 
-    root.addView(saveButton, params(-1, 54));
+    root.addView(saveButton, params(-1, 56));
 
     saveButton.setOnClickListener(v -> saveInformation());
 
@@ -161,16 +162,15 @@ private void createUI() {
             gold
     );
 
-    root.addView(backButton, params(-1, 54));
+    root.addView(backButton, params(-1, 56));
 
     backButton.setOnClickListener(v -> finish());
 
-    // 设置当前页面
     setContentView(scrollView);
 }
 
 /**
- * 创建统一风格的自定义圆角按钮
+ * 创建自定义圆角按钮
  */
 private TextView createActionButton(
         String text,
@@ -184,6 +184,8 @@ private TextView createActionButton(
     button.setTextSize(16);
     button.setTypeface(null, Typeface.BOLD);
     button.setGravity(Gravity.CENTER);
+    button.setIncludeFontPadding(true);
+    button.setMinHeight(dp(56));
     button.setClickable(true);
     button.setFocusable(true);
 
@@ -209,9 +211,11 @@ private void addSectionTitle(
     title.setTextColor(gold);
     title.setTextSize(18);
     title.setTypeface(null, Typeface.BOLD);
-    title.setPadding(0, dp(20), 0, dp(10));
+    title.setIncludeFontPadding(true);
+    title.setGravity(Gravity.CENTER_VERTICAL);
+    title.setPadding(0, dp(12), 0, dp(8));
 
-    root.addView(title);
+    root.addView(title, params(-1, 58));
 }
 
 /**
@@ -221,6 +225,7 @@ private void styleInfoText(TextView textView) {
 
     textView.setTextColor(textColor);
     textView.setTextSize(14);
+    textView.setIncludeFontPadding(true);
     textView.setLineSpacing(dp(5), 1f);
     textView.setPadding(dp(12), dp(12), dp(12), dp(12));
 
@@ -232,7 +237,7 @@ private void styleInfoText(TextView textView) {
 }
 
 /**
- * 创建住宅资料输入框
+ * 创建输入框
  */
 private EditText addInput(
         LinearLayout root,
@@ -244,9 +249,11 @@ private EditText addInput(
     title.setText(label);
     title.setTextColor(Color.WHITE);
     title.setTextSize(14);
-    title.setPadding(0, dp(10), 0, dp(4));
+    title.setIncludeFontPadding(true);
+    title.setGravity(Gravity.CENTER_VERTICAL);
+    title.setPadding(0, dp(8), 0, dp(4));
 
-    root.addView(title);
+    root.addView(title, params(-1, 38));
 
     LinearLayout container = new LinearLayout(this);
     container.setOrientation(LinearLayout.VERTICAL);
@@ -258,6 +265,7 @@ private EditText addInput(
     input.setTextColor(Color.WHITE);
     input.setTextSize(15);
     input.setSingleLine(true);
+    input.setIncludeFontPadding(true);
     input.setGravity(Gravity.CENTER_VERTICAL);
     input.setPadding(dp(12), 0, dp(12), 0);
     input.setBackgroundColor(Color.TRANSPARENT);
@@ -281,16 +289,13 @@ private EditText addInput(
             )
     );
 
-    root.addView(
-            container,
-            params(-1, dp(65))
-    );
+    root.addView(container, params(-1, 65));
 
     return input;
 }
 
 /**
- * 检查住宅资料
+ * 验证资料
  */
 private boolean validateInformation() {
 
@@ -358,7 +363,7 @@ private boolean validateInformation() {
 }
 
 /**
- * 检查按钮功能
+ * 检查住宅资料
  */
 private void checkInformation() {
 
@@ -453,15 +458,25 @@ private void saveInformation() {
 
 /**
  * 统一布局参数
+ *
+ * 关键修复：
+ * 所有高度统一由 dp 转换为像素。
+ * -1 和 -2 保留 Android 原始布局含义。
  */
 private LinearLayout.LayoutParams params(
         int width,
         int height) {
 
-    LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(width, height);
+    int actualWidth = width < 0 ? width : dp(width);
+    int actualHeight = height < 0 ? height : dp(height);
 
-    p.setMargins(0, dp(6), 0, dp(6));
+    LinearLayout.LayoutParams p =
+            new LinearLayout.LayoutParams(
+                    actualWidth,
+                    actualHeight
+            );
+
+    p.setMargins(0, dp(5), 0, dp(5));
 
     return p;
 }
