@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
-import android.graphics.RectF;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
@@ -17,14 +16,38 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.InputType;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.view.inputmethod.InputMethodManager;
+
 import java.util.Locale;
 
-public class ResidenceDirectionActivity extends Activity {
+public class ResidenceDirectionActivity extends Activity
+implements SensorEventListener {
 
 private EditText angleInput;
 private TextView resultText;
 private TextView directionText;
+private TextView sensorStatus;
 private CompassDialView compassView;
+
+private SensorManager sensorManager;
+private Sensor accelerometer;
+private Sensor magneticSensor;
+
+private final float[] gravityValues = new float[3];
+private final float[] magneticValues = new float[3];
+
+private boolean hasGravity = false;
+private boolean hasMagnetic = false;
+private boolean sensorStarted = false;
+
+private double currentAngle = 0;
+private boolean manualMode = false;
+private boolean updatingInput = false;
 
 private final int gold = Color.rgb(215, 175, 95);
 private final int background = Color.rgb(20, 17, 14);
@@ -39,7 +62,187 @@ protected void onCreate(Bundle savedInstanceState) {
     getWindow().setStatusBarColor(background);
     getWindow().setNavigationBarColor(background);
 
+    sensorManager = (SensorManager)
+            getSystemService(Context.SENSOR_SERVICE);
+
+    accelerometer = sensorManager.getDefaultSensor(
+            Sensor.TYPE_ACCELEROMETER
+    );
+
+    magneticSensor = sensorManager.getDefaultSensor(
+            Sensor.TYPE_MAGNETIC_FIELD
+    );
+
     createPage();
+    checkSensors();
+}
+
+@Override
+protected void onResume() {
+    super.onResume();
+    startSensors();
+}
+
+@Override
+protected void onPause() {
+    super.onPause();
+    stopSensors();
+}
+
+private void checkSensors() {
+
+    if (accelerometer == null || magneticSensor == null) {
+
+        sensorStatus.setText(
+                "传感器不可用：无法进行实时指南针测量"
+        );
+
+        sensorStatus.setTextColor(Color.RED);
+
+    } else {
+
+        sensorStatus.setText(
+                "传感器已就绪，等待方向数据……"
+        );
+
+        sensorStatus.setTextColor(gold);
+    }
+}
+
+private void startSensors() {
+
+    if (sensorManager == null
+            || accelerometer == null
+            || magneticSensor == null) {
+        return;
+    }
+
+    sensorManager.registerListener(
+            this,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+    );
+
+    sensorManager.registerListener(
+            this,
+            magneticSensor,
+            SensorManager.SENSOR_DELAY_UI
+    );
+
+    sensorStarted = true;
+}
+
+private void stopSensors() {
+
+    if (sensorManager != null && sensorStarted) {
+        sensorManager.unregisterListener(this);
+    }
+
+    sensorStarted = false;
+}
+
+@Override
+public void onSensorChanged(SensorEvent event) {
+
+    if (event.sensor.getType()
+            == Sensor.TYPE_ACCELEROMETER) {
+
+        lowPassFilter(
+                event.values,
+                gravityValues
+        );
+
+        hasGravity = true;
+
+    } else if (event.sensor.getType()
+            == Sensor.TYPE_MAGNETIC_FIELD) {
+
+        lowPassFilter(
+                event.values,
+                magneticValues
+        );
+
+        hasMagnetic = true;
+    }
+
+    if (hasGravity && hasMagnetic && !manualMode) {
+        calculateSensorAngle();
+    }
+}
+
+private void lowPassFilter(
+        float[] input,
+        float[] output) {
+
+    final float alpha = 0.15f;
+
+    for (int i = 0; i < 3; i++) {
+        output[i] = alpha * input[i]
+                + (1 - alpha) * output[i];
+    }
+}
+
+private void calculateSensorAngle() {
+
+    float[] rotationMatrix = new float[9];
+    float[] orientation = new float[3];
+
+    boolean success = SensorManager.getRotationMatrix(
+            rotationMatrix,
+            null,
+            gravityValues,
+            magneticValues
+    );
+
+    if (!success) {
+        sensorStatus.setText(
+                "方向计算失败，请远离磁性干扰并重新校准"
+        );
+        return;
+    }
+
+    SensorManager.getOrientation(
+            rotationMatrix,
+            orientation
+    );
+
+    double azimuth = Math.toDegrees(orientation[0]);
+
+    azimuth = (azimuth + 360.0) % 360.0;
+
+    currentAngle = azimuth;
+
+    sensorStatus.setText(
+            "实时指南针：传感器工作正常"
+    );
+
+    sensorStatus.setTextColor(gold);
+
+    updateDirectionDisplay(currentAngle);
+}
+
+@Override
+public void onAccuracyChanged(
+        Sensor sensor,
+        int accuracy) {
+
+    if (accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+
+        sensorStatus.setText(
+                "磁场精度较低，请校准手机指南针"
+        );
+
+        sensorStatus.setTextColor(Color.RED);
+
+    } else if (accuracy
+            == SensorManager.SENSOR_STATUS_ACCURACY_LOW) {
+
+        sensorStatus.setText(
+                "指南针精度较低，建议进行校准"
+        );
+
+        sensorStatus.setTextColor(Color.YELLOW);
+    }
 }
 
 private void createPage() {
@@ -64,23 +267,22 @@ private void createPage() {
     root.addView(title, params(-1, 55));
 
     TextView subtitle = new TextView(this);
-    subtitle.setText("传统二十四山 · 住宅坐向测量");
+    subtitle.setText("传统二十四山 · 实时指南针");
     subtitle.setTextColor(gray);
     subtitle.setTextSize(14);
     subtitle.setGravity(Gravity.CENTER);
 
     root.addView(subtitle, params(-1, 35));
 
-    TextView status = new TextView(this);
-    status.setText("当前模式：手动角度测试");
-    status.setTextColor(gold);
-    status.setTextSize(13);
-    status.setGravity(Gravity.CENTER);
-    status.setPadding(0, dp(8), 0, dp(8));
+    sensorStatus = new TextView(this);
+    sensorStatus.setText("正在检查手机传感器……");
+    sensorStatus.setTextColor(gold);
+    sensorStatus.setTextSize(13);
+    sensorStatus.setGravity(Gravity.CENTER);
+    sensorStatus.setPadding(dp(5), dp(8), dp(5), dp(8));
 
-    root.addView(status, params(-1, 35));
+    root.addView(sensorStatus, params(-1, 42));
 
-    // 传统圆形二十四山罗盘
     compassView = new CompassDialView();
 
     LinearLayout.LayoutParams compassParams =
@@ -92,7 +294,7 @@ private void createPage() {
     root.addView(compassView, compassParams);
 
     TextView inputTitle = new TextView(this);
-    inputTitle.setText("输入方位角度");
+    inputTitle.setText("手动输入角度（可选）");
     inputTitle.setTextColor(gold);
     inputTitle.setTextSize(17);
     inputTitle.setTypeface(null, Typeface.BOLD);
@@ -117,7 +319,7 @@ private void createPage() {
     root.addView(angleInput, params(-1, 54));
 
     resultText = new TextView(this);
-    resultText.setText("等待输入角度");
+    resultText.setText("等待传感器数据");
     resultText.setTextColor(gold);
     resultText.setTextSize(23);
     resultText.setTypeface(null, Typeface.BOLD);
@@ -135,15 +337,44 @@ private void createPage() {
 
     root.addView(directionText, params(-1, -2));
 
+    TextView resetButton = createButton(
+            "恢复实时指南针",
+            panel,
+            gold
+    );
+
+    root.addView(resetButton, params(-1, 50));
+
+    resetButton.setOnClickListener(v -> {
+
+        manualMode = false;
+
+        angleInput.setText("");
+
+        hideKeyboard();
+
+        sensorStatus.setText(
+                "已恢复实时指南针模式"
+        );
+
+        sensorStatus.setTextColor(gold);
+
+        if (hasGravity && hasMagnetic) {
+            calculateSensorAngle();
+        }
+    });
+
     TextView note = new TextView(this);
     note.setText(
-            "测量说明：\n\n" +
-            "1. 0°代表正北，角度顺时针增加。\n" +
-            "2. 每一山占15°，共二十四山。\n" +
-            "3. 当前输入角度暂按住宅坐山方向处理。\n" +
-            "4. 朝向取坐山相反方向180°。\n" +
-            "5. 本页面目前尚未接入手机实时传感器。"
+            "使用说明：\n\n" +
+            "1. 手机顶部所指方向为当前测量方向。\n" +
+            "2. 0°代表磁北，角度顺时针增加。\n" +
+            "3. 每一山占15°，共二十四山。\n" +
+            "4. 手机磁力计容易受到金属及电器干扰。\n" +
+            "5. 手机方向不等于住宅实际坐向。\n" +
+            "6. 本功能当前显示磁北参考方位，尚未校正磁偏角。"
     );
+
     note.setTextColor(gray);
     note.setTextSize(13);
     note.setLineSpacing(dp(5), 1f);
@@ -151,13 +382,11 @@ private void createPage() {
 
     root.addView(note, params(-1, -2));
 
-    TextView backButton = new TextView(this);
-    backButton.setText("返回住宅风水分析");
-    backButton.setTextColor(Color.BLACK);
-    backButton.setTextSize(16);
-    backButton.setTypeface(null, Typeface.BOLD);
-    backButton.setGravity(Gravity.CENTER);
-    backButton.setBackgroundColor(gold);
+    TextView backButton = createButton(
+            "返回住宅风水分析",
+            gold,
+            Color.BLACK
+    );
 
     root.addView(backButton, params(-1, 52));
 
@@ -180,7 +409,41 @@ private void createPage() {
                 int before,
                 int count) {
 
-            calculateDirection(s.toString());
+            if (updatingInput) {
+                return;
+            }
+
+            String value = s.toString().trim();
+
+            if (value.isEmpty()) {
+                manualMode = false;
+                return;
+            }
+
+            manualMode = true;
+
+            try {
+
+                double angle = Double.parseDouble(value);
+
+                if (angle < 0 || angle >= 360
+                        || Double.isNaN(angle)
+                        || Double.isInfinite(angle)) {
+
+                    resultText.setText("角度超出范围");
+                    directionText.setText(
+                            "请输入0°至359.99°之间的角度。"
+                    );
+
+                    return;
+                }
+
+                updateDirectionDisplay(angle);
+
+            } catch (NumberFormatException e) {
+
+                resultText.setText("输入格式不正确");
+            }
         }
 
         @Override
@@ -191,78 +454,84 @@ private void createPage() {
     setContentView(scrollView);
 }
 
-private void calculateDirection(String input) {
+private void updateDirectionDisplay(double angle) {
 
-    if (input == null || input.trim().isEmpty()) {
+    double sittingAngle =
+            TwentyFourMountains.normalizeAngle(angle);
 
-        resultText.setText("等待输入角度");
-        directionText.setText("请输入住宅坐山测量角度。");
-
-        compassView.setSelectedAngle(0);
-
-        return;
-    }
-
-    try {
-
-        double angle = Double.parseDouble(input.trim());
-
-        if (Double.isNaN(angle)
-                || Double.isInfinite(angle)
-                || angle < 0
-                || angle >= 360) {
-
-            resultText.setText("角度超出范围");
-            directionText.setText(
-                    "请输入大于或等于0°且小于360°的角度。"
+    double facingAngle =
+            TwentyFourMountains.normalizeAngle(
+                    sittingAngle + 180
             );
 
-            return;
+    String sittingMountain =
+            TwentyFourMountains.getMountainName(
+                    sittingAngle
+            );
+
+    String facingMountain =
+            TwentyFourMountains.getMountainName(
+                    facingAngle
+            );
+
+    resultText.setText(
+            String.format(
+                    Locale.CHINA,
+                    "%.2f°\n%s山",
+                    sittingAngle,
+                    sittingMountain
+            )
+    );
+
+    directionText.setText(
+            String.format(
+                    Locale.CHINA,
+                    "当前方位角：%.2f°\n" +
+                    "当前二十四山：%s山\n\n" +
+                    "相反方向角度：%.2f°\n" +
+                    "相反方向二十四山：%s山",
+                    sittingAngle,
+                    sittingMountain,
+                    facingAngle,
+                    facingMountain
+            )
+    );
+
+    compassView.setSelectedAngle(sittingAngle);
+}
+
+private TextView createButton(
+        String text,
+        int fillColor,
+        int fontColor) {
+
+    TextView button = new TextView(this);
+
+    button.setText(text);
+    button.setTextColor(fontColor);
+    button.setTextSize(16);
+    button.setTypeface(null, Typeface.BOLD);
+    button.setGravity(Gravity.CENTER);
+    button.setBackgroundColor(fillColor);
+    button.setClickable(true);
+
+    return button;
+}
+
+private void hideKeyboard() {
+
+    if (angleInput != null) {
+
+        InputMethodManager manager =
+                (InputMethodManager)
+                        getSystemService(INPUT_METHOD_SERVICE);
+
+        if (manager != null) {
+            manager.hideSoftInputFromWindow(
+                    angleInput.getWindowToken(),
+                    0
+            );
         }
-
-        double sittingAngle =
-                TwentyFourMountains.normalizeAngle(angle);
-
-        double facingAngle =
-                TwentyFourMountains.normalizeAngle(
-                        sittingAngle + 180
-                );
-
-        String sittingMountain =
-                TwentyFourMountains.getMountainName(
-                        sittingAngle
-                );
-
-        String facingMountain =
-                TwentyFourMountains.getMountainName(
-                        facingAngle
-                );
-
-        resultText.setText(
-                sittingMountain + "山坐 · "
-                        + facingMountain + "山向"
-        );
-
-        directionText.setText(
-                String.format(
-                        Locale.CHINA,
-                        "坐山角度：%.2f°\n" +
-                        "坐山：%s山\n\n" +
-                        "朝向角度：%.2f°\n" +
-                        "朝向：%s山",
-                        sittingAngle,
-                        sittingMountain,
-                        facingAngle,
-                        facingMountain
-                )
-        );
-
-        compassView.setSelectedAngle(sittingAngle);
-
-    } catch (NumberFormatException e) {
-
-        resultText.setText("输入格式不正确");
-        directionText.setText("请输入正确的数字角度。");
     }
 }
 
@@ -285,11 +554,12 @@ private int dp(float value) {
 }
 
 /**
- * 传统二十四山圆形罗盘绘制
+ * 传统二十四山圆形罗盘
  */
 private class CompassDialView extends View {
 
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paint =
+            new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final String[] mountains = {
             "子", "癸", "丑",
@@ -311,7 +581,6 @@ private class CompassDialView extends View {
 
     CompassDialView() {
         super(ResidenceDirectionActivity.this);
-        setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     }
 
     void setSelectedAngle(double angle) {
@@ -330,9 +599,7 @@ private class CompassDialView extends View {
             width = dp(320);
         }
 
-        int height = width;
-
-        setMeasuredDimension(width, height);
+        setMeasuredDimension(width, width);
     }
 
     @Override
@@ -340,49 +607,25 @@ private class CompassDialView extends View {
         super.onDraw(canvas);
 
         float width = getWidth();
-        float height = getHeight();
-
         float cx = width / 2f;
-        float cy = height / 2f;
+        float cy = getHeight() / 2f;
 
-        float radius = Math.min(width, height) * 0.46f;
+        float radius = Math.min(width, getHeight()) * 0.46f;
 
-        // 罗盘背景
-        paint.setColor(Color.rgb(30, 25, 20));
         paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.rgb(30, 25, 20));
 
         canvas.drawCircle(cx, cy, radius, paint);
 
-        // 外圈
         paint.setColor(gold);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(2));
 
         canvas.drawCircle(cx, cy, radius, paint);
+        canvas.drawCircle(cx, cy, radius * 0.84f, paint);
+        canvas.drawCircle(cx, cy, radius * 0.53f, paint);
+        canvas.drawCircle(cx, cy, radius * 0.31f, paint);
 
-        // 内圈
-        canvas.drawCircle(
-                cx,
-                cy,
-                radius * 0.84f,
-                paint
-        );
-
-        canvas.drawCircle(
-                cx,
-                cy,
-                radius * 0.53f,
-                paint
-        );
-
-        canvas.drawCircle(
-                cx,
-                cy,
-                radius * 0.31f,
-                paint
-        );
-
-        // 中央圆形
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.rgb(52, 39, 25));
 
@@ -393,7 +636,11 @@ private class CompassDialView extends View {
                 paint
         );
 
-        // 绘制24山分隔线和文字
+        String selectedMountain =
+                TwentyFourMountains.getMountainName(
+                        selectedAngle
+                );
+
         for (int i = 0; i < 24; i++) {
 
             double angle =
@@ -433,11 +680,8 @@ private class CompassDialView extends View {
             paint.setTextAlign(Paint.Align.CENTER);
 
             paint.setColor(
-                    mountains[i].equals(
-                            TwentyFourMountains.getMountainName(
-                                    selectedAngle
-                            )
-                    ) ? Color.YELLOW : gold
+                    mountains[i].equals(selectedMountain)
+                            ? Color.YELLOW : gold
             );
 
             canvas.drawText(
@@ -448,7 +692,6 @@ private class CompassDialView extends View {
             );
         }
 
-        // 八方方位
         for (int i = 0; i < 8; i++) {
 
             double angle =
@@ -477,17 +720,25 @@ private class CompassDialView extends View {
 
         // 正北标记
         paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.FILL);
 
-        float northTop = cy - radius * 0.98f;
+        android.graphics.Path path =
+                new android.graphics.Path();
 
-        PathHelper.drawTriangle(
-                canvas,
-                paint,
-                cx,
-                northTop,
-                dp(9)
+        float topY = cy - radius * 0.98f;
+        float triangleSize = dp(9);
+
+        path.moveTo(cx, topY);
+        path.lineTo(
+                cx - triangleSize,
+                topY + triangleSize * 1.6f
         );
+        path.lineTo(
+                cx + triangleSize,
+                topY + triangleSize * 1.6f
+        );
+        path.close();
+
+        canvas.drawPath(path, paint);
 
         // 中央十字线
         paint.setColor(gold);
@@ -509,7 +760,6 @@ private class CompassDialView extends View {
                 paint
         );
 
-        // 中心文字
         paint.setColor(white);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTextSize(dp(14));
@@ -531,32 +781,7 @@ private class CompassDialView extends View {
                 paint
         );
 
-        // 恢复绘制状态
         paint.setStyle(Paint.Style.FILL);
-    }
-}
-
-/**
- * 三角形绘制辅助
- */
-private static class PathHelper {
-
-    static void drawTriangle(
-            Canvas canvas,
-            Paint paint,
-            float centerX,
-            float topY,
-            float size) {
-
-        android.graphics.Path path =
-                new android.graphics.Path();
-
-        path.moveTo(centerX, topY);
-        path.lineTo(centerX - size, topY + size * 1.6f);
-        path.lineTo(centerX + size, topY + size * 1.6f);
-        path.close();
-
-        canvas.drawPath(path, paint);
     }
 }
 
