@@ -278,7 +278,7 @@ public class ResidenceDirectionActivity extends Activity
         root.addView(title, params(-1, 55));
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("传统二十四山 · 动态旋转罗盘");
+        subtitle.setText("传统二十四山 · 红白双头磁针");
         subtitle.setTextColor(gray);
         subtitle.setTextSize(14);
         subtitle.setGravity(Gravity.CENTER);
@@ -381,9 +381,10 @@ public class ResidenceDirectionActivity extends Activity
                 "1. 手机顶部所指方向为当前测量方向。\n" +
                 "2. 0°代表磁北，角度顺时针增加。\n" +
                 "3. 每一山占15°，共二十四山。\n" +
-                "4. 手机磁力计容易受到金属及电器干扰。\n" +
-                "5. 手机方向不等于住宅实际坐向。\n" +
-                "6. 本功能当前显示磁北参考方位，尚未校正磁偏角。"
+                "4. 红色磁针端代表磁北，白色端代表磁南。\n" +
+                "5. 手机磁力计容易受到金属及电器干扰。\n" +
+                "6. 手机方向不等于住宅实际坐向。\n" +
+                "7. 当前显示磁北参考方位，尚未校正磁偏角。"
         );
 
         note.setTextColor(gray);
@@ -562,10 +563,7 @@ public class ResidenceDirectionActivity extends Activity
     }
 
     /**
-     * 动态二十四山罗盘
-     *
-     * 盘面根据当前方位反向旋转；
-     * 红色指针根据当前手机朝向转动。
+     * 传统二十四山动态罗盘
      */
     private class CompassDialView extends View {
 
@@ -623,9 +621,10 @@ public class ResidenceDirectionActivity extends Activity
 
             float radius = Math.min(width, getHeight()) * 0.46f;
 
-            // 固定外圈背景
+            // 固定外圈
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.rgb(30, 25, 20));
+
             canvas.drawCircle(cx, cy, radius, paint);
 
             paint.setStyle(Paint.Style.STROKE);
@@ -634,8 +633,9 @@ public class ResidenceDirectionActivity extends Activity
 
             canvas.drawCircle(cx, cy, radius, paint);
 
-            // 盘面整体旋转
+            // 旋转二十四山盘面
             canvas.save();
+
             canvas.rotate(
                     (float) -selectedAngle,
                     cx,
@@ -646,17 +646,26 @@ public class ResidenceDirectionActivity extends Activity
 
             canvas.restore();
 
-            // 中心固定标记
-            drawCenter(canvas, cx, cy, radius);
+            // 磁针与盘面使用相同的方向关系
+            canvas.save();
 
-            // 固定外圈方向指针：显示手机当前朝向
-            drawHeadingPointer(
+            canvas.rotate(
+                    (float) -selectedAngle,
+                    cx,
+                    cy
+            );
+
+            drawMagneticNeedle(
                     canvas,
                     cx,
                     cy,
-                    radius,
-                    selectedAngle
+                    radius
             );
+
+            canvas.restore();
+
+            // 固定中心轴
+            drawCenterAxis(canvas, cx, cy);
         }
 
         private void drawDialFace(
@@ -700,6 +709,11 @@ public class ResidenceDirectionActivity extends Activity
                     paint
             );
 
+            String selectedMountain =
+                    TwentyFourMountains.getMountainName(
+                            selectedAngle
+                    );
+
             for (int i = 0; i < 24; i++) {
 
                 double angle =
@@ -739,11 +753,8 @@ public class ResidenceDirectionActivity extends Activity
                 paint.setTextAlign(Paint.Align.CENTER);
 
                 paint.setColor(
-                        mountains[i].equals(
-                                TwentyFourMountains.getMountainName(
-                                        selectedAngle
-                                )
-                        ) ? Color.YELLOW : gold
+                        mountains[i].equals(selectedMountain)
+                                ? Color.YELLOW : gold
                 );
 
                 canvas.drawText(
@@ -783,11 +794,66 @@ public class ResidenceDirectionActivity extends Activity
             paint.setStyle(Paint.Style.FILL);
         }
 
-        private void drawCenter(
+        /**
+         * 红白双头磁针
+         */
+        private void drawMagneticNeedle(
                 Canvas canvas,
                 float cx,
                 float cy,
                 float radius) {
+
+            float halfLength = radius * 0.39f;
+            float halfWidth = dp(9);
+
+            // 红色磁北端
+            Path northPath = new Path();
+
+            northPath.moveTo(cx, cy - halfLength);
+            northPath.lineTo(cx - halfWidth, cy);
+            northPath.lineTo(cx + halfWidth, cy);
+            northPath.close();
+
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.RED);
+
+            canvas.drawPath(northPath, paint);
+
+            // 白色磁南端
+            Path southPath = new Path();
+
+            southPath.moveTo(cx, cy + halfLength);
+            southPath.lineTo(cx - halfWidth, cy);
+            southPath.lineTo(cx + halfWidth, cy);
+            southPath.close();
+
+            paint.setColor(Color.WHITE);
+
+            canvas.drawPath(southPath, paint);
+
+            // 指针外轮廓
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(1.5f));
+            paint.setColor(gold);
+
+            canvas.drawLine(
+                    cx,
+                    cy - halfLength,
+                    cx,
+                    cy + halfLength,
+                    paint
+            );
+
+            paint.setStyle(Paint.Style.FILL);
+        }
+
+        /**
+         * 固定中心旋转轴
+         */
+        private void drawCenterAxis(
+                Canvas canvas,
+                float cx,
+                float cy) {
 
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.rgb(52, 39, 25));
@@ -795,95 +861,39 @@ public class ResidenceDirectionActivity extends Activity
             canvas.drawCircle(
                     cx,
                     cy,
-                    radius * 0.27f,
+                    dp(17),
                     paint
             );
 
             paint.setColor(gold);
-            paint.setStrokeWidth(dp(1.5f));
 
-            canvas.drawLine(
-                    cx - radius * 0.23f,
+            canvas.drawCircle(
+                    cx,
                     cy,
-                    cx + radius * 0.23f,
-                    cy,
+                    dp(12),
                     paint
             );
 
-            canvas.drawLine(
+            paint.setColor(Color.rgb(30, 25, 20));
+
+            canvas.drawCircle(
                     cx,
-                    cy - radius * 0.23f,
-                    cx,
-                    cy + radius * 0.23f,
+                    cy,
+                    dp(7),
                     paint
             );
 
             paint.setColor(white);
             paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTextSize(dp(14));
+            paint.setTextSize(dp(9));
             paint.setTypeface(Typeface.DEFAULT_BOLD);
 
             canvas.drawText(
                     "玄天",
                     cx,
-                    cy - dp(5),
+                    cy + dp(3),
                     paint
             );
-
-            paint.setTextSize(dp(11));
-
-            canvas.drawText(
-                    "罗盘",
-                    cx,
-                    cy + dp(15),
-                    paint
-            );
-        }
-
-        private void drawHeadingPointer(
-                Canvas canvas,
-                float cx,
-                float cy,
-                float radius,
-                double angle) {
-
-            canvas.save();
-
-            canvas.rotate(
-                    (float) angle,
-                    cx,
-                    cy
-            );
-
-            float tipY = cy - radius * 0.98f;
-            float baseY = cy - radius * 0.78f;
-            float size = dp(10);
-
-            Path path = new Path();
-
-            path.moveTo(cx, tipY);
-            path.lineTo(cx - size, baseY);
-            path.lineTo(cx + size, baseY);
-            path.close();
-
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.RED);
-
-            canvas.drawPath(path, paint);
-
-            paint.setColor(Color.WHITE);
-            paint.setTextSize(dp(10));
-            paint.setTypeface(Typeface.DEFAULT_BOLD);
-            paint.setTextAlign(Paint.Align.CENTER);
-
-            canvas.drawText(
-                    "朝向",
-                    cx,
-                    baseY + dp(15),
-                    paint
-            );
-
-            canvas.restore();
         }
     }
 }
