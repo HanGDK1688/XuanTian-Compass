@@ -1,6 +1,29 @@
-import android.app.Activity; import android.os.Bundle; import android.graphics.Canvas; import android.graphics.Color; import android.graphics.Paint; import android.graphics.Path; import android.graphics.Typeface; import android.view.Gravity; import android.view.View; import android.widget.EditText; import android.widget.LinearLayout; import android.widget.ScrollView; import android.widget.TextView; import android.text.Editable; import android.text.TextWatcher; import android.text.InputType;
-import android.content.Context; import android.hardware.Sensor; import android.hardware.SensorEvent; import android.hardware.SensorEventListener; import android.hardware.SensorManager; import android.view.inputmethod.InputMethodManager;
+package com.xuantian.compass;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Typeface;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.text.InputType;
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.view.inputmethod.InputMethodManager;
 import java.util.Locale;
+
 public class ResidenceDirectionActivity extends Activity implements SensorEventListener {
 private EditText angleInput;
 private TextView resultText;
@@ -735,4 +758,5 @@ private class CompassDialView extends View {
         );
     }
 }
+
 }
