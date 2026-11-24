@@ -103,13 +103,31 @@ private void createUI() {
     TextView directionInfo = new TextView(this);
 
     directionInfo.setText(
-            "后续通过二十四山罗盘测量住宅坐向。\n\n" +
-            "坐向需要区分坐山与朝向，不能简单地把手机指南针读数直接当作住宅坐向。\n\n" +
-            "后续将增加住宅坐向测量及二十四山定位功能。"
+            "住宅坐向需要区分坐山与朝向。\n\n" +
+            "通过二十四山罗盘测量住宅坐向，" +
+            "记录住宅的坐山、朝向及对应角度。\n\n" +
+            "注意：不能简单地把手机指南针读数直接当作住宅坐向。"
     );
 
     styleInfoText(directionInfo);
     root.addView(directionInfo, params(-1, -2));
+
+    // 住宅坐向测量入口
+    TextView directionButton = createActionButton(
+            "测量住宅坐向 · 二十四山罗盘",
+            gold,
+            background
+    );
+
+    root.addView(directionButton, params(-1, 56));
+
+    directionButton.setOnClickListener(v -> {
+        Intent intent = new Intent(
+                ResidenceActivity.this,
+                ResidenceDirectionActivity.class
+        );
+        startActivity(intent);
+    });
 
     // 三、排盘说明
     addSectionTitle(root, "三、排盘说明");
