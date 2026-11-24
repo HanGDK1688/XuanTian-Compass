@@ -2,6 +2,7 @@ package com.xuantian.compass;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -62,7 +63,7 @@ private void createUI() {
 
     scrollView.addView(root);
 
-    // 页面主标题
+    // 页面标题
     TextView title = new TextView(this);
     title.setText("住宅风水分析");
     title.setTextColor(gold);
@@ -73,17 +74,15 @@ private void createUI() {
 
     root.addView(title, params(-1, 60));
 
-    // 副标题
     TextView subtitle = new TextView(this);
     subtitle.setText("住宅基本资料 · 玄空飞星宅盘");
     subtitle.setTextColor(Color.LTGRAY);
     subtitle.setTextSize(14);
     subtitle.setGravity(Gravity.CENTER);
-    subtitle.setIncludeFontPadding(true);
 
     root.addView(subtitle, params(-1, 40));
 
-    // 第一部分
+    // 一、住宅基本信息
     addSectionTitle(root, "一、住宅基本信息");
 
     houseNameInput = addInput(
@@ -98,7 +97,7 @@ private void createUI() {
     areaInput = addInput(
             root, "住宅面积（平方米）", "例如：120");
 
-    // 第二部分
+    // 二、住宅坐向
     addSectionTitle(root, "二、住宅坐向");
 
     TextView directionInfo = new TextView(this);
@@ -106,13 +105,13 @@ private void createUI() {
     directionInfo.setText(
             "后续通过二十四山罗盘测量住宅坐向。\n\n" +
             "坐向需要区分坐山与朝向，不能简单地把手机指南针读数直接当作住宅坐向。\n\n" +
-            "后续将增加住宅坐向测量及二十四山定位功能。");
+            "后续将增加住宅坐向测量及二十四山定位功能。"
+    );
 
     styleInfoText(directionInfo);
-
     root.addView(directionInfo, params(-1, -2));
 
-    // 第三部分
+    // 三、排盘说明
     addSectionTitle(root, "三、排盘说明");
 
     TextView methodInfo = new TextView(this);
@@ -124,16 +123,15 @@ private void createUI() {
             "3. 根据坐山、朝向确定宅盘。\n" +
             "4. 暂不处理替卦及兼向。\n\n" +
             "注意：建造年份不一定等于实际入伙或换运年份，" +
-            "后续需要进一步确定住宅的起运依据。");
+            "后续需要进一步确定住宅的起运依据。"
+    );
 
     styleInfoText(methodInfo);
-
     root.addView(methodInfo, params(-1, -2));
 
-    // 第四部分
+    // 四、住宅资料管理
     addSectionTitle(root, "四、住宅资料管理");
 
-    // 检查按钮
     TextView checkButton = createActionButton(
             "检查住宅资料",
             gold,
@@ -141,10 +139,8 @@ private void createUI() {
     );
 
     root.addView(checkButton, params(-1, 56));
-
     checkButton.setOnClickListener(v -> checkInformation());
 
-    // 保存按钮
     TextView saveButton = createActionButton(
             "保存住宅资料",
             gold,
@@ -152,10 +148,26 @@ private void createUI() {
     );
 
     root.addView(saveButton, params(-1, 56));
-
     saveButton.setOnClickListener(v -> saveInformation());
 
-    // 返回按钮
+    // 查看住宅档案入口
+    TextView listButton = createActionButton(
+            "查看已保存的住宅档案",
+            cardBackground,
+            gold
+    );
+
+    root.addView(listButton, params(-1, 56));
+
+    listButton.setOnClickListener(v -> {
+        Intent intent = new Intent(
+                ResidenceActivity.this,
+                ResidenceListActivity.class
+        );
+        startActivity(intent);
+    });
+
+    // 返回首页
     TextView backButton = createActionButton(
             "返回罗盘首页",
             cardBackground,
@@ -163,7 +175,6 @@ private void createUI() {
     );
 
     root.addView(backButton, params(-1, 56));
-
     backButton.setOnClickListener(v -> finish());
 
     setContentView(scrollView);
@@ -237,7 +248,7 @@ private void styleInfoText(TextView textView) {
 }
 
 /**
- * 创建输入框
+ * 创建住宅资料输入框
  */
 private EditText addInput(
         LinearLayout root,
@@ -272,10 +283,7 @@ private EditText addInput(
 
     container.addView(
             input,
-            new LinearLayout.LayoutParams(
-                    -1,
-                    dp(64)
-            )
+            new LinearLayout.LayoutParams(-1, dp(64))
     );
 
     View underline = new View(this);
@@ -283,10 +291,7 @@ private EditText addInput(
 
     container.addView(
             underline,
-            new LinearLayout.LayoutParams(
-                    -1,
-                    dp(1)
-            )
+            new LinearLayout.LayoutParams(-1, dp(1))
     );
 
     root.addView(container, params(-1, 65));
@@ -295,7 +300,7 @@ private EditText addInput(
 }
 
 /**
- * 验证资料
+ * 验证住宅资料
  */
 private boolean validateInformation() {
 
@@ -326,7 +331,8 @@ private boolean validateInformation() {
 
     if (year < 1900 || year > 2052) {
         buildingYearInput.setError(
-                "目前支持的节气数据范围为1900—2052年");
+                "目前支持的节气数据范围为1900—2052年"
+        );
         buildingYearInput.requestFocus();
         return false;
     }
@@ -410,13 +416,15 @@ private void saveInformation() {
             houseNameInput.getText().toString().trim();
 
     int year = Integer.parseInt(
-            buildingYearInput.getText().toString().trim());
+            buildingYearInput.getText().toString().trim()
+    );
 
     String floor =
             floorInput.getText().toString().trim();
 
     double area = Double.parseDouble(
-            areaInput.getText().toString().trim());
+            areaInput.getText().toString().trim()
+    );
 
     if (name.isEmpty()) {
         name = "未命名住宅";
@@ -458,10 +466,6 @@ private void saveInformation() {
 
 /**
  * 统一布局参数
- *
- * 关键修复：
- * 所有高度统一由 dp 转换为像素。
- * -1 和 -2 保留 Android 原始布局含义。
  */
 private LinearLayout.LayoutParams params(
         int width,
