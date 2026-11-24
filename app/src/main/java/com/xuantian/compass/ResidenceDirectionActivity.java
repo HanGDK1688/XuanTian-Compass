@@ -1,6 +1,3 @@
-文件名： "ResidenceDirectionActivity.java"
-文件路径： "app/src/main/java/com/xuantian/compass/ResidenceDirectionActivity.java"
-
 package com.xuantian.compass;
 
 import android.app.Activity;
