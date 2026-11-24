@@ -1,47 +1,50 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><!-- 指南针传感器 -->
+<uses-feature
+    android:name="android.hardware.sensor.compass"
+    android:required="false" />
 
-    <!-- 指南针传感器 -->
-    <uses-feature
-        android:name="android.hardware.sensor.compass"
-        android:required="false" />
+<!-- 加速度传感器 -->
+<uses-feature
+    android:name="android.hardware.sensor.accelerometer"
+    android:required="false" />
 
-    <!-- 加速度传感器 -->
-    <uses-feature
-        android:name="android.hardware.sensor.accelerometer"
-        android:required="false" />
+<application
+    android:allowBackup="true"
+    android:label="玄天罗盘"
+    android:theme="@android:style/Theme.Material.Light.NoActionBar"
+    android:supportsRtl="true">
 
-    <application
-        android:allowBackup="true"
-        android:label="玄天罗盘"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:supportsRtl="true">
+    <!-- 主罗盘页面 -->
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:screenOrientation="portrait">
 
-        <!-- 主罗盘页面 -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+    </activity>
 
-        </activity>
+    <!-- 玄空飞星排盘页面 -->
+    <activity
+        android:name=".XuanKongActivity"
+        android:exported="false"
+        android:screenOrientation="portrait" />
 
-        <!-- 玄空飞星排盘页面 -->
-        <activity
-            android:name=".XuanKongActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+    <!-- V1.4 住宅风水分析页面 -->
+    <activity
+        android:name=".ResidenceActivity"
+        android:exported="false"
+        android:screenOrientation="portrait" />
 
-        <!-- V1.4 住宅风水分析页面 -->
-        <activity
-            android:name=".ResidenceActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+    <!-- V1.4 住宅档案列表页面 -->
+    <activity
+        android:name=".ResidenceListActivity"
+        android:exported="false"
+        android:screenOrientation="portrait" />
 
-    </application>
+</application>
 
 </manifest>
