@@ -13,6 +13,10 @@
     android:label="玄天罗盘"
     android:theme="@android:style/Theme.Material.Light.NoActionBar"
     android:supportsRtl="true">
+    <activity
+    android:name=".ResidenceDirectionActivity"
+    android:exported="false"
+    android:screenOrientation="portrait" />
 
     <!-- 主罗盘页面 -->
     <activity
