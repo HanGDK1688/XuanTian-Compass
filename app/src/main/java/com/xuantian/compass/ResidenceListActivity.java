@@ -6,8 +6,10 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -19,11 +21,13 @@ public class ResidenceListActivity extends Activity {
 
 private ResidenceStorage storage;
 private LinearLayout listContainer;
+private TextView countTitle;
 
 private final int gold = Color.rgb(220, 180, 105);
 private final int background = Color.rgb(20, 17, 14);
 private final int cardBackground = Color.rgb(34, 29, 24);
 private final int textColor = Color.rgb(235, 225, 210);
+private final int red = Color.rgb(190, 75, 65);
 
 @Override
 protected void onCreate(Bundle savedInstanceState) {
@@ -38,11 +42,21 @@ protected void onCreate(Bundle savedInstanceState) {
     loadResidences();
 }
 
+@Override
+protected void onResume() {
+    super.onResume();
+
+    if (listContainer != null && storage != null) {
+        loadResidences();
+    }
+}
+
 private void createUI() {
 
     ScrollView scrollView = new ScrollView(this);
     scrollView.setBackgroundColor(background);
     scrollView.setFillViewport(true);
+    scrollView.setVerticalScrollBarEnabled(false);
 
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
@@ -68,8 +82,7 @@ private void createUI() {
 
     root.addView(subtitle, params(-1, 40));
 
-    TextView countTitle = new TextView(this);
-    countTitle.setText("已保存的住宅");
+    countTitle = new TextView(this);
     countTitle.setTextColor(gold);
     countTitle.setTextSize(18);
     countTitle.setTypeface(null, Typeface.BOLD);
@@ -89,7 +102,6 @@ private void createUI() {
     );
 
     root.addView(refreshButton, params(-1, 54));
-
     refreshButton.setOnClickListener(v -> loadResidences());
 
     TextView backButton = createButton(
@@ -99,14 +111,13 @@ private void createUI() {
     );
 
     root.addView(backButton, params(-1, 54));
-
     backButton.setOnClickListener(v -> finish());
 
     setContentView(scrollView);
 }
 
 /**
- * 读取数据库中的全部住宅
+ * 读取全部住宅档案
  */
 private void loadResidences() {
 
@@ -114,7 +125,11 @@ private void loadResidences() {
 
     List<ResidenceData> residences = storage.getAll();
 
-    if (residences == null || residences.isEmpty()) {
+    int total = residences == null ? 0 : residences.size();
+
+    countTitle.setText("已保存的住宅（" + total + " 套）");
+
+    if (total == 0) {
 
         TextView empty = new TextView(this);
 
@@ -129,10 +144,7 @@ private void loadResidences() {
         empty.setLineSpacing(dp(6), 1f);
         empty.setPadding(dp(15), dp(30), dp(15), dp(30));
 
-        listContainer.addView(
-                empty,
-                params(-1, -2)
-        );
+        listContainer.addView(empty, params(-1, -2));
 
         return;
     }
@@ -143,7 +155,7 @@ private void loadResidences() {
 }
 
 /**
- * 创建单套住宅档案卡片
+ * 创建住宅档案卡片
  */
 private void addResidenceCard(ResidenceData data) {
 
@@ -178,29 +190,59 @@ private void addResidenceCard(ResidenceData data) {
     info.setTextColor(textColor);
     info.setTextSize(14);
     info.setLineSpacing(dp(5), 1f);
-    info.setPadding(0, dp(10), 0, dp(5));
+    info.setPadding(0, dp(10), 0, dp(8));
 
     card.addView(info, params(-1, -2));
 
-    TextView detail = new TextView(this);
-    detail.setText("查看档案详情");
-    detail.setTextColor(gold);
-    detail.setTextSize(14);
-    detail.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-    detail.setPadding(0, dp(8), 0, dp(4));
+    // 操作按钮区域
+    LinearLayout actions = new LinearLayout(this);
+    actions.setOrientation(LinearLayout.HORIZONTAL);
+    actions.setGravity(Gravity.CENTER_VERTICAL);
 
-    card.addView(detail, params(-1, 35));
+    TextView detailButton = createSmallButton(
+            "查看详情",
+            cardBackground,
+            gold
+    );
 
-    card.setClickable(true);
-    card.setFocusable(true);
+    TextView editButton = createSmallButton(
+            "编辑",
+            gold,
+            background
+    );
 
-    card.setOnClickListener(v -> showDetails(data));
+    TextView deleteButton = createSmallButton(
+            "删除",
+            red,
+            Color.WHITE
+    );
+
+    LinearLayout.LayoutParams actionParams =
+            new LinearLayout.LayoutParams(
+                    0,
+                    dp(42),
+                    1
+            );
+
+    actionParams.setMargins(dp(3), dp(5), dp(3), dp(5));
+
+    actions.addView(detailButton, actionParams);
+    actions.addView(editButton, actionParams);
+    actions.addView(deleteButton, actionParams);
+
+    card.addView(actions);
+
+    detailButton.setOnClickListener(v -> showDetails(data));
+
+    editButton.setOnClickListener(v -> showEditDialog(data));
+
+    deleteButton.setOnClickListener(v -> confirmDelete(data));
 
     listContainer.addView(card, params(-1, -2));
 }
 
 /**
- * 显示档案详细信息
+ * 查看住宅详细资料
  */
 private void showDetails(ResidenceData data) {
 
@@ -219,7 +261,231 @@ private void showDetails(ResidenceData data) {
 }
 
 /**
- * 创建统一风格按钮
+ * 编辑住宅资料
+ */
+private void showEditDialog(ResidenceData data) {
+
+    LinearLayout form = new LinearLayout(this);
+    form.setOrientation(LinearLayout.VERTICAL);
+    form.setPadding(dp(22), dp(8), dp(22), dp(5));
+
+    EditText nameInput = createEditInput(
+            "住宅名称",
+            data.name,
+            InputType.TYPE_CLASS_TEXT
+    );
+
+    EditText yearInput = createEditInput(
+            "建造年份",
+            String.valueOf(data.buildingYear),
+            InputType.TYPE_CLASS_NUMBER
+    );
+
+    EditText floorInput = createEditInput(
+            "所在楼层",
+            data.floor,
+            InputType.TYPE_CLASS_TEXT
+    );
+
+    EditText areaInput = createEditInput(
+            "住宅面积（平方米）",
+            String.valueOf(data.area),
+            InputType.TYPE_CLASS_NUMBER |
+            InputType.TYPE_NUMBER_FLAG_DECIMAL
+    );
+
+    addFormField(form, "住宅名称", nameInput);
+    addFormField(form, "建造年份", yearInput);
+    addFormField(form, "所在楼层", floorInput);
+    addFormField(form, "住宅面积（平方米）", areaInput);
+
+    ScrollView scrollView = new ScrollView(this);
+    scrollView.addView(form);
+
+    AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("编辑住宅档案")
+            .setView(scrollView)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("保存修改", null)
+            .create();
+
+    dialog.setOnShowListener(v -> {
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(button -> {
+
+                    String name = nameInput.getText()
+                            .toString().trim();
+
+                    String yearText = yearInput.getText()
+                            .toString().trim();
+
+                    String floor = floorInput.getText()
+                            .toString().trim();
+
+                    String areaText = areaInput.getText()
+                            .toString().trim();
+
+                    if (yearText.isEmpty()) {
+                        yearInput.setError("请输入建造年份");
+                        return;
+                    }
+
+                    int year;
+
+                    try {
+                        year = Integer.parseInt(yearText);
+                    } catch (NumberFormatException e) {
+                        yearInput.setError("年份必须是数字");
+                        return;
+                    }
+
+                    if (year < 1900 || year > 2052) {
+                        yearInput.setError("年份范围为1900—2052");
+                        return;
+                    }
+
+                    if (floor.isEmpty()) {
+                        floorInput.setError("请输入所在楼层");
+                        return;
+                    }
+
+                    if (areaText.isEmpty()) {
+                        areaInput.setError("请输入住宅面积");
+                        return;
+                    }
+
+                    double area;
+
+                    try {
+                        area = Double.parseDouble(areaText);
+                    } catch (NumberFormatException e) {
+                        areaInput.setError("面积必须是数字");
+                        return;
+                    }
+
+                    if (area <= 0) {
+                        areaInput.setError("面积必须大于0");
+                        return;
+                    }
+
+                    if (name.isEmpty()) {
+                        name = "未命名住宅";
+                    }
+
+                    data.name = name;
+                    data.buildingYear = year;
+                    data.floor = floor;
+                    data.area = area;
+
+                    int result = storage.update(data);
+
+                    if (result > 0) {
+
+                        Toast.makeText(
+                                this,
+                                "住宅资料修改成功",
+                                Toast.LENGTH_SHORT
+                        ).show();
+
+                        dialog.dismiss();
+                        loadResidences();
+
+                    } else {
+
+                        Toast.makeText(
+                                this,
+                                "修改失败，请重试",
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+                });
+    });
+
+    dialog.show();
+}
+
+/**
+ * 创建编辑输入框
+ */
+private EditText createEditInput(
+        String hint,
+        String value,
+        int inputType) {
+
+    EditText input = new EditText(this);
+
+    input.setHint(hint);
+    input.setText(value);
+    input.setTextSize(16);
+    input.setSingleLine(true);
+    input.setInputType(inputType);
+    input.setPadding(dp(10), dp(8), dp(10), dp(8));
+
+    return input;
+}
+
+/**
+ * 添加表单字段
+ */
+private void addFormField(
+        LinearLayout parent,
+        String label,
+        EditText input) {
+
+    TextView title = new TextView(this);
+
+    title.setText(label);
+    title.setTextSize(14);
+    title.setTextColor(Color.DKGRAY);
+    title.setPadding(0, dp(8), 0, dp(2));
+
+    parent.addView(title, params(-1, -2));
+    parent.addView(input, params(-1, 52));
+}
+
+/**
+ * 删除前确认
+ */
+private void confirmDelete(ResidenceData data) {
+
+    new AlertDialog.Builder(this)
+            .setTitle("删除住宅档案")
+            .setMessage(
+                    "确定要删除这套住宅资料吗？\n\n" +
+                    "住宅名称：" + data.name +
+                    "\n档案编号：" + data.id +
+                    "\n\n删除后无法通过本页面恢复。"
+            )
+            .setNegativeButton("取消", null)
+            .setPositiveButton("确认删除", (dialog, which) -> {
+
+                int result = storage.delete(data.id);
+
+                if (result > 0) {
+
+                    Toast.makeText(
+                            this,
+                            "住宅档案已删除",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                    loadResidences();
+
+                } else {
+
+                    Toast.makeText(
+                            this,
+                            "删除失败，请重试",
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            })
+            .show();
+}
+
+/**
+ * 创建大按钮
  */
 private TextView createButton(
         String text,
@@ -246,6 +512,37 @@ private TextView createButton(
     return button;
 }
 
+/**
+ * 创建档案卡片小按钮
+ */
+private TextView createSmallButton(
+        String text,
+        int fillColor,
+        int fontColor) {
+
+    TextView button = new TextView(this);
+
+    button.setText(text);
+    button.setTextColor(fontColor);
+    button.setTextSize(13);
+    button.setTypeface(null, Typeface.BOLD);
+    button.setGravity(Gravity.CENTER);
+    button.setIncludeFontPadding(true);
+    button.setClickable(true);
+    button.setFocusable(true);
+
+    GradientDrawable drawable = new GradientDrawable();
+    drawable.setColor(fillColor);
+    drawable.setCornerRadius(dp(8));
+
+    button.setBackground(drawable);
+
+    return button;
+}
+
+/**
+ * 统一布局参数
+ */
 private LinearLayout.LayoutParams params(
         int width,
         int height) {
@@ -259,11 +556,14 @@ private LinearLayout.LayoutParams params(
                     actualHeight
             );
 
-    p.setMargins(0, dp(6), 0, dp(6));
+    p.setMargins(0, dp(5), 0, dp(5));
 
     return p;
 }
 
+/**
+ * dp转换
+ */
 private int dp(float value) {
 
     return (int) (
