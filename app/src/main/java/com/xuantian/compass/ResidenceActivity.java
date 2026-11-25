@@ -21,6 +21,8 @@ import java.util.Locale;
 
 public class ResidenceActivity extends Activity {
 
+    private static final int REQUEST_COMPASS_DIRECTION = 1001;
+
     private EditText buildingYearInput;
     private EditText floorInput;
     private EditText houseNameInput;
@@ -134,7 +136,11 @@ public class ResidenceActivity extends Activity {
                     ResidenceActivity.this,
                     ResidenceDirectionActivity.class
             );
-            startActivity(intent);
+
+            startActivityForResult(
+                    intent,
+                    REQUEST_COMPASS_DIRECTION
+            );
         });
 
         facingAngleInput = addInput(
@@ -253,6 +259,68 @@ public class ResidenceActivity extends Activity {
         backButton.setOnClickListener(v -> finish());
 
         setContentView(scrollView);
+    }
+
+    /**
+     * 接收住宅坐向罗盘返回的测量结果
+     */
+    @Override
+    protected void onActivityResult(
+            int requestCode,
+            int resultCode,
+            Intent data) {
+
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode != REQUEST_COMPASS_DIRECTION) {
+            return;
+        }
+
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            return;
+        }
+
+        if (!data.hasExtra("facing_angle")) {
+            Toast.makeText(
+                    this,
+                    "没有收到有效的罗盘测量结果",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        double angle = data.getDoubleExtra("facing_angle", -1);
+
+        if (Double.isNaN(angle)
+                || Double.isInfinite(angle)
+                || angle < 0
+                || angle >= 360) {
+
+            Toast.makeText(
+                    this,
+                    "返回的测量角度无效",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        facingAngleInput.setText(
+                String.format(Locale.US, "%.2f", angle)
+        );
+
+        facingAngleInput.setSelection(
+                facingAngleInput.getText().length()
+        );
+
+        updateFacingDisplay(
+                facingAngleInput.getText().toString().trim()
+        );
+
+        Toast.makeText(
+                this,
+                "罗盘测量角度已自动填入",
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
     /**
