@@ -12,17 +12,17 @@ import java.util.List;
 /**
  * 住宅资料本地数据库
  *
- * 数据库升级到版本2：
- * 增加住宅朝向角度和二十四山字段。
- *
- * 通过ALTER TABLE升级，保留原有住宅资料。
+ * 数据库版本3：
+ * 1. 保存住宅朝向角度和二十四山。
+ * 2. 增加首次入住年份，用于住宅元运计算。
+ * 3. 旧住宅资料自动以建造年份填充首次入住年份。
  */
 public class ResidenceStorage extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME =
             "xuantian_residences.db";
 
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     private static final String TABLE_NAME = "residences";
 
@@ -38,6 +38,7 @@ public class ResidenceStorage extends SQLiteOpenHelper {
                         + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                         + "name TEXT NOT NULL,"
                         + "building_year INTEGER NOT NULL,"
+                        + "move_in_year INTEGER NOT NULL DEFAULT 0,"
                         + "floor TEXT NOT NULL,"
                         + "area REAL NOT NULL,"
                         + "facing_angle REAL NOT NULL DEFAULT -1,"
@@ -65,6 +66,23 @@ public class ResidenceStorage extends SQLiteOpenHelper {
                     "ALTER TABLE " + TABLE_NAME
                             + " ADD COLUMN facing_mountain TEXT"
                             + " NOT NULL DEFAULT ''"
+            );
+        }
+
+        if (oldVersion < 3) {
+
+            db.execSQL(
+                    "ALTER TABLE " + TABLE_NAME
+                            + " ADD COLUMN move_in_year INTEGER"
+                            + " NOT NULL DEFAULT 0"
+            );
+
+            // 旧档案首次入住年份暂以建造年份作为默认值。
+            // 用户之后可以在住宅资料页面修改。
+            db.execSQL(
+                    "UPDATE " + TABLE_NAME
+                            + " SET move_in_year = building_year"
+                            + " WHERE move_in_year = 0"
             );
         }
     }
@@ -185,6 +203,7 @@ public class ResidenceStorage extends SQLiteOpenHelper {
 
         values.put("name", data.name);
         values.put("building_year", data.buildingYear);
+        values.put("move_in_year", data.moveInYear);
         values.put("floor", data.floor);
         values.put("area", data.area);
         values.put("facing_angle", data.facingAngle);
@@ -208,6 +227,9 @@ public class ResidenceStorage extends SQLiteOpenHelper {
 
         data.buildingYear = cursor.getInt(
                 cursor.getColumnIndexOrThrow("building_year"));
+
+        data.moveInYear = cursor.getInt(
+                cursor.getColumnIndexOrThrow("move_in_year"));
 
         data.floor = cursor.getString(
                 cursor.getColumnIndexOrThrow("floor"));
