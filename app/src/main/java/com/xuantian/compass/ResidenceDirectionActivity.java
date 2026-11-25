@@ -2,11 +2,11 @@ package com.xuantian.compass;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
 import android.graphics.Typeface;
@@ -25,6 +25,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
+
 import java.util.Locale;
 
 public class ResidenceDirectionActivity extends Activity
@@ -46,6 +48,7 @@ public class ResidenceDirectionActivity extends Activity
     private boolean hasGravity = false;
     private boolean hasMagnetic = false;
     private boolean sensorStarted = false;
+    private boolean hasValidAngle = false;
 
     private double currentAngle = 0;
     private boolean manualMode = false;
@@ -165,6 +168,7 @@ public class ResidenceDirectionActivity extends Activity
                 magneticValues);
 
         if (!success) {
+            hasValidAngle = false;
             sensorStatus.setText("方向计算失败，请远离磁性干扰并重新校准");
             sensorStatus.setTextColor(Color.RED);
             return;
@@ -176,6 +180,7 @@ public class ResidenceDirectionActivity extends Activity
         azimuth = (azimuth + 360.0) % 360.0;
 
         currentAngle = azimuth;
+        hasValidAngle = true;
 
         sensorStatus.setText("实时指南针：传感器工作正常");
         sensorStatus.setTextColor(gold);
@@ -287,6 +292,10 @@ public class ResidenceDirectionActivity extends Activity
 
             if (hasGravity && hasMagnetic) {
                 calculateSensorAngle();
+            } else {
+                hasValidAngle = false;
+                resultText.setText("等待传感器数据");
+                directionText.setText("等待手机方向数据……");
             }
         });
 
@@ -308,8 +317,14 @@ public class ResidenceDirectionActivity extends Activity
         note.setPadding(dp(6), dp(14), dp(6), dp(14));
         root.addView(note, params(-1, -2));
 
+        TextView confirmButton = createButton(
+                "确认并返回住宅资料", gold, Color.BLACK);
+        root.addView(confirmButton, params(-1, 52));
+
+        confirmButton.setOnClickListener(v -> confirmDirection());
+
         TextView backButton = createButton(
-                "返回住宅风水分析", gold, Color.BLACK);
+                "返回住宅风水分析", panel, gold);
         root.addView(backButton, params(-1, 50));
         backButton.setOnClickListener(v -> finish());
 
@@ -327,6 +342,14 @@ public class ResidenceDirectionActivity extends Activity
 
                 if (value.isEmpty()) {
                     manualMode = false;
+
+                    if (hasGravity && hasMagnetic) {
+                        calculateSensorAngle();
+                    } else {
+                        hasValidAngle = false;
+                        resultText.setText("等待传感器数据");
+                        directionText.setText("等待手机方向数据……");
+                    }
                     return;
                 }
 
@@ -338,6 +361,8 @@ public class ResidenceDirectionActivity extends Activity
                     if (angle < 0 || angle >= 360
                             || Double.isNaN(angle)
                             || Double.isInfinite(angle)) {
+
+                        hasValidAngle = false;
                         resultText.setText("角度超出范围");
                         directionText.setText(
                                 "请输入0°至359.99°之间的角度。");
@@ -345,10 +370,13 @@ public class ResidenceDirectionActivity extends Activity
                     }
 
                     currentAngle = angle;
+                    hasValidAngle = true;
                     updateDirectionDisplay(angle);
 
                 } catch (NumberFormatException e) {
+                    hasValidAngle = false;
                     resultText.setText("输入格式不正确");
+                    directionText.setText("请检查输入的角度。");
                 }
             }
 
@@ -358,6 +386,32 @@ public class ResidenceDirectionActivity extends Activity
         });
 
         setContentView(scrollView);
+    }
+
+    /**
+     * 确认当前角度，并返回住宅资料页面
+     */
+    private void confirmDirection() {
+
+        hideKeyboard();
+
+        if (!hasValidAngle) {
+            Toast.makeText(
+                    this,
+                    "尚未取得有效角度，请等待传感器数据或手动输入角度",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        double angle =
+                TwentyFourMountains.normalizeAngle(currentAngle);
+
+        Intent result = new Intent();
+        result.putExtra("facing_angle", angle);
+
+        setResult(Activity.RESULT_OK, result);
+        finish();
     }
 
     private void updateDirectionDisplay(double angle) {
@@ -556,7 +610,6 @@ public class ResidenceDirectionActivity extends Activity
             canvas.save();
             canvas.rotate((float) -selectedAngle, cx, cy);
 
-            // 外侧四圈：越靠外越窄
             drawRing(canvas, cx, cy, radius,
                     0.94f, 0.98f, baguaLater, 8, ink, 11);
 
@@ -569,7 +622,6 @@ public class ResidenceDirectionActivity extends Activity
             drawRing(canvas, cx, cy, radius,
                     0.74f, 0.80f, stems, 10, redInk, 10);
 
-            // 中心五圈：越靠中心越宽
             drawRing(canvas, cx, cy, radius,
                     0.64f, 0.73f, branches, 12, ink, 10);
 
@@ -649,7 +701,6 @@ public class ResidenceDirectionActivity extends Activity
             float middle = (inner + outer) / 2f;
             float bandWidth = outer - inner;
 
-            // 用环形描边填充圈层，不覆盖其他圈层
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(bandWidth);
             paint.setColor(
@@ -659,13 +710,11 @@ public class ResidenceDirectionActivity extends Activity
 
             canvas.drawCircle(cx, cy, middle, paint);
 
-            // 圈层边界
             paint.setStrokeWidth(dp(0.8f));
             paint.setColor(bronze);
             canvas.drawCircle(cx, cy, inner, paint);
             canvas.drawCircle(cx, cy, outer, paint);
 
-            // 分隔线
             for (int i = 0; i < divisions; i++) {
                 double angle = Math.toRadians(
                         i * 360.0 / divisions - 90);
@@ -689,7 +738,6 @@ public class ResidenceDirectionActivity extends Activity
                 canvas.drawLine(x1, y1, x2, y2, paint);
             }
 
-            // 文字
             paint.setStyle(Paint.Style.FILL);
             paint.setTypeface(Typeface.create(
                     "serif", Typeface.BOLD));
@@ -707,7 +755,6 @@ public class ResidenceDirectionActivity extends Activity
                         + (float) Math.sin(angle) * middle;
 
                 if (divisions == 60) {
-                    // 六十甲子两个字沿径向分开，减少拥挤
                     drawRadialPair(
                             canvas, labels[i], tx, ty,
                             angle, dp(6));
