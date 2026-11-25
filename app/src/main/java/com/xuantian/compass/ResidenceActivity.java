@@ -24,6 +24,7 @@ public class ResidenceActivity extends Activity {
     private static final int REQUEST_COMPASS_DIRECTION = 1001;
 
     private EditText buildingYearInput;
+    private EditText moveInYearInput;
     private EditText floorInput;
     private EditText houseNameInput;
     private EditText areaInput;
@@ -101,6 +102,18 @@ public class ResidenceActivity extends Activity {
 
         buildingYearInput = addInput(
                 root, "建造年份", "请输入公历年份，例如：2024");
+
+        moveInYearInput = addInput(
+                root, "首次入住年份", "请输入实际首次入住年份，例如：2025");
+
+        TextView moveInInfo = new TextView(this);
+        moveInInfo.setText(
+                "首次入住年份用于确定住宅元运。\n"
+                + "第一版采用首次实际入住年份作为起运依据，"
+                + "并以立春作为年份交界。"
+        );
+        styleInfoText(moveInInfo);
+        root.addView(moveInInfo, params(-1, -2));
 
         floorInput = addInput(
                 root, "所在楼层", "例如：6");
@@ -202,11 +215,12 @@ public class ResidenceActivity extends Activity {
         methodInfo.setText(
                 "当前采用的开发方案：\n\n"
                 + "1. 玄空飞星下卦法。\n"
-                + "2. 根据住宅起运依据确定元运。\n"
-                + "3. 根据坐山、朝向确定宅盘。\n"
-                + "4. 暂不处理替卦及兼向。\n\n"
-                + "注意：建造年份不一定等于实际入伙或换运年份，"
-                + "后续需要进一步确定住宅的起运依据。"
+                + "2. 以住宅首次实际入住年份作为起运依据。\n"
+                + "3. 以立春作为年份交界。\n"
+                + "4. 根据坐山、朝向确定宅盘。\n"
+                + "5. 暂不处理替卦及兼向。\n\n"
+                + "注意：特殊情况及不同传承的换运规则，"
+                + "后续仍需进一步核实。"
         );
 
         styleInfoText(methodInfo);
@@ -496,6 +510,9 @@ public class ResidenceActivity extends Activity {
         String yearText =
                 buildingYearInput.getText().toString().trim();
 
+        String moveInText =
+                moveInYearInput.getText().toString().trim();
+
         String floorText =
                 floorInput.getText().toString().trim();
 
@@ -523,6 +540,33 @@ public class ResidenceActivity extends Activity {
                     "目前支持的节气数据范围为1900—2052年");
             buildingYearInput.requestFocus();
             return false;
+        }
+
+        if (!moveInText.isEmpty()) {
+
+            int moveInYear;
+
+            try {
+                moveInYear = Integer.parseInt(moveInText);
+            } catch (NumberFormatException e) {
+                moveInYearInput.setError("首次入住年份必须是数字");
+                moveInYearInput.requestFocus();
+                return false;
+            }
+
+            if (moveInYear < 1900 || moveInYear > 2052) {
+                moveInYearInput.setError(
+                        "目前支持的年份范围为1900—2052年");
+                moveInYearInput.requestFocus();
+                return false;
+            }
+
+            if (moveInYear < year) {
+                moveInYearInput.setError(
+                        "首次入住年份不能早于建造年份");
+                moveInYearInput.requestFocus();
+                return false;
+            }
         }
 
         if (floorText.isEmpty()) {
@@ -583,6 +627,20 @@ public class ResidenceActivity extends Activity {
         return true;
     }
 
+    private int getEffectiveMoveInYear() {
+
+        String moveInText =
+                moveInYearInput.getText().toString().trim();
+
+        if (moveInText.isEmpty()) {
+            return Integer.parseInt(
+                    buildingYearInput.getText().toString().trim()
+            );
+        }
+
+        return Integer.parseInt(moveInText);
+    }
+
     private void checkInformation() {
 
         if (!validateInformation()) {
@@ -594,6 +652,8 @@ public class ResidenceActivity extends Activity {
 
         String year =
                 buildingYearInput.getText().toString().trim();
+
+        int moveInYear = getEffectiveMoveInYear();
 
         String floor =
                 floorInput.getText().toString().trim();
@@ -627,6 +687,7 @@ public class ResidenceActivity extends Activity {
         String summary =
                 "住宅名称：" + (name.isEmpty() ? "未填写" : name)
                 + "\n建造年份：" + year
+                + "\n首次入住年份：" + moveInYear
                 + "\n所在楼层：" + floor
                 + "\n住宅面积：" + area + " 平方米"
                 + "\n" + directionSummary
@@ -652,6 +713,8 @@ public class ResidenceActivity extends Activity {
                 buildingYearInput.getText().toString().trim()
         );
 
+        int moveInYear = getEffectiveMoveInYear();
+
         String floor =
                 floorInput.getText().toString().trim();
 
@@ -667,6 +730,7 @@ public class ResidenceActivity extends Activity {
 
         data.name = name;
         data.buildingYear = year;
+        data.moveInYear = moveInYear;
         data.floor = floor;
         data.area = area;
 
@@ -715,6 +779,7 @@ public class ResidenceActivity extends Activity {
                             "住宅资料已经保存到手机本地数据库。\n\n"
                             + "住宅名称：" + name
                             + "\n建造年份：" + year
+                            + "\n首次入住年份：" + moveInYear
                             + "\n所在楼层：" + floor
                             + "\n住宅面积：" + area + " 平方米"
                             + directionSummary
