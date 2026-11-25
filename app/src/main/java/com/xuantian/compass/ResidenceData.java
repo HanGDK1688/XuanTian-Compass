@@ -3,30 +3,29 @@ package com.xuantian.compass;
 /**
  * 住宅资料数据模型
  *
- * 用于记录每一套住宅的基本信息。
+ * 用于记录每一套住宅的基本信息和坐向信息。
  */
 public class ResidenceData {
 
-    // 数据库记录编号
     public int id;
 
-    // 住宅名称
     public String name;
 
-    // 建造年份
     public int buildingYear;
 
-    // 所在楼层
     public String floor;
 
-    // 住宅面积（平方米）
     public double area;
 
-    // 空构造方法
+    // 住宅朝向角度，-1表示尚未设置
+    public double facingAngle = -1;
+
+    // 住宅朝向对应的二十四山名称
+    public String facingMountain = "";
+
     public ResidenceData() {
     }
 
-    // 完整构造方法
     public ResidenceData(
             int id,
             String name,
