@@ -7,6 +7,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Typeface;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
@@ -22,7 +24,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.view.inputmethod.InputMethodManager;
-
 import java.util.Locale;
 
 public class ResidenceDirectionActivity extends Activity
@@ -48,9 +49,9 @@ public class ResidenceDirectionActivity extends Activity
     private double currentAngle = 0;
     private boolean manualMode = false;
 
-    private final int gold = Color.rgb(215, 175, 95);
-    private final int background = Color.rgb(20, 17, 14);
-    private final int panel = Color.rgb(42, 35, 28);
+    private final int gold = Color.rgb(184, 139, 68);
+    private final int background = Color.rgb(31, 23, 16);
+    private final int panel = Color.rgb(53, 40, 27);
     private final int white = Color.WHITE;
     private final int gray = Color.LTGRAY;
 
@@ -199,7 +200,6 @@ public class ResidenceDirectionActivity extends Activity
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(12), dp(14), dp(12), dp(24));
-
         scrollView.addView(root);
 
         TextView title = new TextView(this);
@@ -297,8 +297,7 @@ public class ResidenceDirectionActivity extends Activity
                 "4. 二十四山每山15°，用于基础方位识别。\n" +
                 "5. 六十甲子圈为分区展示，不代表完整择日盘式。\n" +
                 "6. 十二长生、二十八宿及九星目前为基础展示，尚未完成流派精确排布。\n" +
-                "7. 本页尚未校正磁偏角，不能直接代替专业住宅坐向测量。"
-        );
+                "7. 本页尚未校正磁偏角，不能直接代替专业住宅坐向测量。");
         note.setTextColor(gray);
         note.setTextSize(13);
         note.setLineSpacing(dp(5), 1f);
@@ -436,19 +435,17 @@ public class ResidenceDirectionActivity extends Activity
                         .getDisplayMetrics().density + 0.5f);
     }
 
-    /**
-     * 仿古九圈罗盘绘制区域
-     */
     private class CompassDialView extends View {
 
         private final Paint paint =
                 new Paint(Paint.ANTI_ALIAS_FLAG);
 
-        private final int paper = Color.rgb(226, 207, 163);
-        private final int paperLight = Color.rgb(239, 224, 190);
-        private final int ink = Color.rgb(75, 48, 27);
-        private final int bronze = Color.rgb(139, 91, 43);
-        private final int redInk = Color.rgb(155, 43, 31);
+        private final int paper = Color.rgb(202, 174, 119);
+        private final int paperLight = Color.rgb(222, 198, 151);
+        private final int paperDark = Color.rgb(157, 119, 69);
+        private final int ink = Color.rgb(65, 40, 23);
+        private final int bronze = Color.rgb(111, 72, 35);
+        private final int redInk = Color.rgb(137, 38, 26);
 
         private final String[] baguaLater = {
                 "坎", "艮", "震", "巽",
@@ -545,14 +542,27 @@ public class ResidenceDirectionActivity extends Activity
             float cy = getHeight() / 2f;
             float radius = Math.min(width, getHeight()) * 0.47f;
 
-            // 仿古纸质底盘
+            // 仿古宣纸渐变底色
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(paper);
-            canvas.drawCircle(cx, cy, radius, paint);
+            paint.setShader(new RadialGradient(
+                    cx - radius * 0.18f,
+                    cy - radius * 0.20f,
+                    radius * 1.15f,
+                    new int[]{
+                            paperLight,
+                            paper,
+                            paperDark
+                    },
+                    new float[]{0f, 0.72f, 1f},
+                    Shader.TileMode.CLAMP));
 
+            canvas.drawCircle(cx, cy, radius, paint);
+            paint.setShader(null);
+
+            // 外缘双层旧铜边框
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(bronze);
-            paint.setStrokeWidth(dp(2));
+            paint.setStrokeWidth(dp(3));
             canvas.drawCircle(cx, cy, radius, paint);
 
             paint.setStrokeWidth(dp(1));
@@ -561,44 +571,40 @@ public class ResidenceDirectionActivity extends Activity
             canvas.save();
             canvas.rotate((float) -selectedAngle, cx, cy);
 
-            // 第一圈：后天八卦
             drawRing(canvas, cx, cy, radius,
                     0.88f, 0.97f, baguaLater, 8, 11);
 
-            // 第二圈：先天八卦
             drawRing(canvas, cx, cy, radius,
-                    0.78f, 0.87f, baguaEarlier, 8, 11);
+                    0.77f, 0.87f, baguaEarlier, 8, 11);
 
-            // 第三圈：二十四山
             drawRing(canvas, cx, cy, radius,
-                    0.67f, 0.77f, mountains, 24, 9);
+                    0.64f, 0.76f, mountains, 24, 9);
 
-            // 第四圈：十天干
             drawRing(canvas, cx, cy, radius,
-                    0.57f, 0.66f, stems, 10, 10);
+                    0.53f, 0.63f, stems, 10, 10);
 
-            // 第五圈：十二地支
             drawRing(canvas, cx, cy, radius,
-                    0.47f, 0.56f, branches, 12, 10);
+                    0.42f, 0.52f, branches, 12, 10);
 
-            // 第六圈：六十甲子，两个字沿半径竖排
+            // 加宽六十甲子圈
             drawSixtyJiaZiRing(canvas, cx, cy, radius,
-                    0.34f, 0.46f);
+                    0.28f, 0.41f);
 
-            // 第七圈：十二长生
+            // 加宽十二长生圈
             drawRing(canvas, cx, cy, radius,
-                    0.24f, 0.33f, twelveStages, 12, 8);
+                    0.17f, 0.27f, twelveStages, 12, 9);
 
-            // 第八圈：二十八宿
+            // 加宽二十八宿圈
             drawRing(canvas, cx, cy, radius,
-                    0.14f, 0.23f, twentyEightMansions, 28, 7);
+                    0.075f, 0.16f, twentyEightMansions, 28, 7);
 
-            // 第九圈：九星
+            // 九星圈
             drawRing(canvas, cx, cy, radius,
-                    0.055f, 0.13f, nineStars, 9, 7);
+                    0.025f, 0.065f, nineStars, 9, 6);
 
             canvas.restore();
 
+            // 缩短磁针，减少对中心圈层的遮挡
             drawNorthSouthNeedle(canvas, cx, cy, radius);
             drawCenterAxis(canvas, cx, cy);
         }
@@ -620,11 +626,10 @@ public class ResidenceDirectionActivity extends Activity
 
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(paperLight);
-
             canvas.drawCircle(cx, cy, outer, paint);
 
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(0.8f));
+            paint.setStrokeWidth(dp(0.9f));
             paint.setColor(bronze);
 
             canvas.drawCircle(cx, cy, inner, paint);
@@ -650,7 +655,6 @@ public class ResidenceDirectionActivity extends Activity
             paint.setTypeface(Typeface.DEFAULT_BOLD);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTextSize(dp(textSizeDp));
-            paint.setColor(ink);
 
             for (int i = 0; i < labels.length; i++) {
                 double angle = Math.toRadians(
@@ -661,11 +665,9 @@ public class ResidenceDirectionActivity extends Activity
                 float ty = cy
                         + (float) Math.sin(angle) * middle;
 
-                if (i == 0 && labels.length == 24) {
-                    paint.setColor(redInk);
-                } else {
-                    paint.setColor(ink);
-                }
+                paint.setColor(
+                        (i == 0 && labels.length == 24)
+                                ? redInk : ink);
 
                 canvas.drawText(
                         labels[i],
@@ -699,8 +701,7 @@ public class ResidenceDirectionActivity extends Activity
             canvas.drawCircle(cx, cy, outer, paint);
 
             for (int i = 0; i < 60; i++) {
-                double angle = Math.toRadians(
-                        i * 6.0 - 90);
+                double angle = Math.toRadians(i * 6.0 - 90);
 
                 float x1 = cx
                         + (float) Math.cos(angle) * inner;
@@ -717,12 +718,11 @@ public class ResidenceDirectionActivity extends Activity
             paint.setStyle(Paint.Style.FILL);
             paint.setTypeface(Typeface.DEFAULT_BOLD);
             paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTextSize(dp(5.5f));
+            paint.setTextSize(dp(6));
             paint.setColor(ink);
 
             for (int i = 0; i < sixtyJiaZi.length; i++) {
-                double angle = Math.toRadians(
-                        i * 6.0 - 90);
+                double angle = Math.toRadians(i * 6.0 - 90);
 
                 float tx = cx
                         + (float) Math.cos(angle) * middle;
@@ -740,7 +740,7 @@ public class ResidenceDirectionActivity extends Activity
                 canvas.drawText(
                         first, tx, ty - dp(1), paint);
                 canvas.drawText(
-                        second, tx, ty + dp(5), paint);
+                        second, tx, ty + dp(6), paint);
 
                 canvas.restore();
             }
@@ -752,8 +752,8 @@ public class ResidenceDirectionActivity extends Activity
                 float cy,
                 float radius) {
 
-            float length = radius * 0.24f;
-            float halfWidth = dp(6);
+            float length = radius * 0.12f;
+            float halfWidth = dp(5);
 
             Path north = new Path();
             north.moveTo(cx, cy - length);
@@ -762,7 +762,7 @@ public class ResidenceDirectionActivity extends Activity
             north.close();
 
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.rgb(176, 45, 32));
+            paint.setColor(Color.rgb(155, 37, 26));
             canvas.drawPath(north, paint);
 
             Path south = new Path();
@@ -771,7 +771,7 @@ public class ResidenceDirectionActivity extends Activity
             south.lineTo(cx + halfWidth, cy);
             south.close();
 
-            paint.setColor(Color.rgb(250, 246, 229));
+            paint.setColor(Color.rgb(246, 233, 205));
             canvas.drawPath(south, paint);
 
             paint.setStyle(Paint.Style.STROKE);
@@ -785,15 +785,15 @@ public class ResidenceDirectionActivity extends Activity
             paint.setStyle(Paint.Style.FILL);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTypeface(Typeface.DEFAULT_BOLD);
-            paint.setTextSize(dp(9));
+            paint.setTextSize(dp(8));
 
             paint.setColor(redInk);
             canvas.drawText(
-                    "N", cx, cy - length - dp(3), paint);
+                    "N", cx, cy - length - dp(2), paint);
 
             paint.setColor(ink);
             canvas.drawText(
-                    "S", cx, cy + length + dp(11), paint);
+                    "S", cx, cy + length + dp(10), paint);
         }
 
         private void drawCenterAxis(
@@ -802,27 +802,27 @@ public class ResidenceDirectionActivity extends Activity
                 float cy) {
 
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.rgb(112, 76, 39));
-            canvas.drawCircle(cx, cy, dp(17), paint);
+            paint.setColor(Color.rgb(111, 73, 37));
+            canvas.drawCircle(cx, cy, dp(11), paint);
 
             paint.setColor(paperLight);
-            canvas.drawCircle(cx, cy, dp(13), paint);
+            canvas.drawCircle(cx, cy, dp(8), paint);
 
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(dp(1));
             paint.setColor(bronze);
-            canvas.drawCircle(cx, cy, dp(13), paint);
+            canvas.drawCircle(cx, cy, dp(8), paint);
 
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(ink);
             paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTextSize(dp(8));
+            paint.setTextSize(dp(6));
             paint.setTypeface(Typeface.DEFAULT_BOLD);
 
             canvas.drawText(
                     "玄天",
                     cx,
-                    cy + dp(3),
+                    cy + dp(2),
                     paint);
         }
     }
