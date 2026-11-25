@@ -155,6 +155,19 @@ public class ResidenceListActivity extends Activity {
     }
 
     /**
+     * 获取有效的首次入住年份
+     */
+    private int getMoveInYear(ResidenceData data) {
+
+        if (data.moveInYear >= 1900
+                && data.moveInYear <= 2052) {
+            return data.moveInYear;
+        }
+
+        return data.buildingYear;
+    }
+
+    /**
      * 创建住宅档案卡片
      */
     private void addResidenceCard(ResidenceData data) {
@@ -182,6 +195,7 @@ public class ResidenceListActivity extends Activity {
 
         info.setText(
                 "建造年份：" + data.buildingYear
+                + "\n首次入住年份：" + getMoveInYear(data)
                 + "\n所在楼层：" + data.floor
                 + "\n住宅面积：" + data.area + " 平方米"
                 + "\n" + getDirectionSummary(data)
@@ -283,9 +297,12 @@ public class ResidenceListActivity extends Activity {
                 "档案编号：" + data.id
                 + "\n住宅名称：" + data.name
                 + "\n建造年份：" + data.buildingYear
+                + "\n首次入住年份：" + getMoveInYear(data)
                 + "\n所在楼层：" + data.floor
                 + "\n住宅面积：" + data.area + " 平方米"
                 + "\n\n" + getDirectionSummary(data)
+                + "\n\n元运起算依据：首次实际入住年份"
+                + "\n年份交界：立春"
                 + "\n\n说明：坐山根据朝向反方向计算，"
                 + "尚未处理兼向及替卦。";
 
@@ -319,6 +336,12 @@ public class ResidenceListActivity extends Activity {
                 InputType.TYPE_CLASS_NUMBER
         );
 
+        EditText moveInYearInput = createEditInput(
+                "首次入住年份",
+                String.valueOf(getMoveInYear(data)),
+                InputType.TYPE_CLASS_NUMBER
+        );
+
         EditText floorInput = createEditInput(
                 "所在楼层",
                 data.floor,
@@ -343,6 +366,7 @@ public class ResidenceListActivity extends Activity {
 
         addFormField(form, "住宅名称", nameInput);
         addFormField(form, "建造年份", yearInput);
+        addFormField(form, "首次入住年份", moveInYearInput);
         addFormField(form, "所在楼层", floorInput);
         addFormField(form, "住宅面积（平方米）", areaInput);
         addFormField(form, "住宅朝向角度", facingInput);
@@ -409,6 +433,9 @@ public class ResidenceListActivity extends Activity {
                         String yearText = yearInput.getText()
                                 .toString().trim();
 
+                        String moveInText = moveInYearInput.getText()
+                                .toString().trim();
+
                         String floor = floorInput.getText()
                                 .toString().trim();
 
@@ -434,6 +461,32 @@ public class ResidenceListActivity extends Activity {
 
                         if (year < 1900 || year > 2052) {
                             yearInput.setError("年份范围为1900—2052");
+                            return;
+                        }
+
+                        if (moveInText.isEmpty()) {
+                            moveInYearInput.setError("请输入首次入住年份");
+                            return;
+                        }
+
+                        int moveInYear;
+
+                        try {
+                            moveInYear = Integer.parseInt(moveInText);
+                        } catch (NumberFormatException e) {
+                            moveInYearInput.setError("年份必须是数字");
+                            return;
+                        }
+
+                        if (moveInYear < 1900 || moveInYear > 2052) {
+                            moveInYearInput.setError(
+                                    "首次入住年份范围为1900—2052");
+                            return;
+                        }
+
+                        if (moveInYear < year) {
+                            moveInYearInput.setError(
+                                    "首次入住年份不能早于建造年份");
                             return;
                         }
 
@@ -498,6 +551,7 @@ public class ResidenceListActivity extends Activity {
                         // 保留原来的档案编号
                         data.name = name;
                         data.buildingYear = year;
+                        data.moveInYear = moveInYear;
                         data.floor = floor;
                         data.area = area;
 
