@@ -2,13 +2,12 @@ package com.xuantian.compass;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
@@ -17,6 +16,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.Calendar;
 import java.util.Locale;
 
 public class ResidenceActivity extends Activity {
@@ -24,16 +24,19 @@ public class ResidenceActivity extends Activity {
     private static final int REQUEST_COMPASS_DIRECTION = 1001;
 
     private EditText buildingYearInput;
-    private EditText moveInYearInput;
     private EditText floorInput;
     private EditText houseNameInput;
     private EditText areaInput;
     private EditText facingAngleInput;
 
+    private TextView moveInDateButton;
     private TextView facingMountainText;
     private TextView sittingMountainText;
 
     private ResidenceStorage residenceStorage;
+
+    // 首次入住日期，格式：yyyy-MM-dd
+    private String moveInDate = "";
 
     private double facingAngle = -1;
 
@@ -103,14 +106,32 @@ public class ResidenceActivity extends Activity {
         buildingYearInput = addInput(
                 root, "建造年份", "请输入公历年份，例如：2024");
 
-        moveInYearInput = addInput(
-                root, "首次入住年份", "请输入实际首次入住年份，例如：2025");
+        // 首次入住日期选择器
+        TextView moveInDateTitle = new TextView(this);
+        moveInDateTitle.setText("首次实际入住日期");
+        moveInDateTitle.setTextColor(Color.WHITE);
+        moveInDateTitle.setTextSize(14);
+        moveInDateTitle.setGravity(Gravity.CENTER_VERTICAL);
+        moveInDateTitle.setPadding(0, dp(8), 0, dp(4));
+
+        root.addView(moveInDateTitle, params(-1, 38));
+
+        moveInDateButton = createActionButton(
+                "请选择首次入住日期",
+                cardBackground,
+                gold
+        );
+
+        root.addView(moveInDateButton, params(-1, 56));
+
+        moveInDateButton.setOnClickListener(v -> showMoveInDatePicker());
 
         TextView moveInInfo = new TextView(this);
         moveInInfo.setText(
-                "首次入住年份用于确定住宅元运。\n"
-                + "第一版采用首次实际入住年份作为起运依据，"
-                + "并以立春作为年份交界。"
+                "首次实际入住日期用于确定住宅元运。\n"
+                + "第一版采用首次实际入住日期作为起运依据，"
+                + "并以立春作为年份交界。\n"
+                + "请尽量选择真实入住日期，不要使用估计日期。"
         );
         styleInfoText(moveInInfo);
         root.addView(moveInInfo, params(-1, -2));
@@ -183,7 +204,8 @@ public class ResidenceActivity extends Activity {
         sittingMountainText.setBackgroundColor(cardBackground);
         root.addView(sittingMountainText, params(-1, 52));
 
-        facingAngleInput.addTextChangedListener(new TextWatcher() {
+        facingAngleInput.addTextChangedListener(
+                new android.text.TextWatcher() {
 
             @Override
             public void beforeTextChanged(
@@ -204,7 +226,8 @@ public class ResidenceActivity extends Activity {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
+            public void afterTextChanged(
+                    android.text.Editable s) {
             }
         });
 
@@ -215,7 +238,7 @@ public class ResidenceActivity extends Activity {
         methodInfo.setText(
                 "当前采用的开发方案：\n\n"
                 + "1. 玄空飞星下卦法。\n"
-                + "2. 以住宅首次实际入住年份作为起运依据。\n"
+                + "2. 以住宅首次实际入住日期作为起运依据。\n"
                 + "3. 以立春作为年份交界。\n"
                 + "4. 根据坐山、朝向确定宅盘。\n"
                 + "5. 暂不处理替卦及兼向。\n\n"
@@ -273,6 +296,114 @@ public class ResidenceActivity extends Activity {
         backButton.setOnClickListener(v -> finish());
 
         setContentView(scrollView);
+    }
+
+    /**
+     * 弹出首次入住日期选择器
+     */
+    private void showMoveInDatePicker() {
+
+        int year;
+        int month;
+        int day;
+
+        if (!moveInDate.isEmpty()) {
+
+            String[] parts = moveInDate.split("-");
+
+            year = Integer.parseInt(parts[0]);
+            month = Integer.parseInt(parts[1]) - 1;
+            day = Integer.parseInt(parts[2]);
+
+        } else {
+
+            int buildingYear = getBuildingYearForPicker();
+
+            year = buildingYear > 0 ? buildingYear : 2024;
+            month = 0;
+            day = 1;
+        }
+
+        DatePickerDialog dialog = new DatePickerDialog(
+                this,
+                (view, selectedYear, selectedMonth, selectedDay) -> {
+
+                    if (selectedYear < 1900 || selectedYear > 2052) {
+                        Toast.makeText(
+                                this,
+                                "日期范围必须在1900—2052年",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+
+                    int buildingYear = getBuildingYearForPicker();
+
+                    if (buildingYear > 0
+                            && selectedYear < buildingYear) {
+
+                        Toast.makeText(
+                                this,
+                                "首次入住日期不能早于建造年份",
+                                Toast.LENGTH_LONG
+                        ).show();
+                        return;
+                    }
+
+                    moveInDate = String.format(
+                            Locale.US,
+                            "%04d-%02d-%02d",
+                            selectedYear,
+                            selectedMonth + 1,
+                            selectedDay
+                    );
+
+                    moveInDateButton.setText(
+                            "首次入住日期：" + moveInDate
+                    );
+                },
+                year,
+                month,
+                day
+        );
+
+        Calendar minDate = Calendar.getInstance();
+        minDate.set(1900, Calendar.JANUARY, 1, 0, 0, 0);
+        minDate.set(Calendar.MILLISECOND, 0);
+
+        Calendar maxDate = Calendar.getInstance();
+        maxDate.set(2052, Calendar.DECEMBER, 31, 23, 59, 59);
+        maxDate.set(Calendar.MILLISECOND, 999);
+
+        dialog.getDatePicker().setMinDate(minDate.getTimeInMillis());
+        dialog.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
+
+        dialog.setTitle("选择首次实际入住日期");
+        dialog.show();
+    }
+
+    /**
+     * 获取建造年份，用于日期选择器初始日期
+     */
+    private int getBuildingYearForPicker() {
+
+        String value = buildingYearInput.getText().toString().trim();
+
+        if (value.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            int year = Integer.parseInt(value);
+
+            if (year >= 1900 && year <= 2052) {
+                return year;
+            }
+
+        } catch (NumberFormatException ignored) {
+        }
+
+        return 0;
     }
 
     /**
@@ -510,9 +641,6 @@ public class ResidenceActivity extends Activity {
         String yearText =
                 buildingYearInput.getText().toString().trim();
 
-        String moveInText =
-                moveInYearInput.getText().toString().trim();
-
         String floorText =
                 floorInput.getText().toString().trim();
 
@@ -542,31 +670,37 @@ public class ResidenceActivity extends Activity {
             return false;
         }
 
-        if (!moveInText.isEmpty()) {
+        if (moveInDate.isEmpty()) {
+            Toast.makeText(
+                    this,
+                    "请选择首次实际入住日期",
+                    Toast.LENGTH_LONG
+            ).show();
+            return false;
+        }
 
-            int moveInYear;
+        int moveInYear;
 
-            try {
-                moveInYear = Integer.parseInt(moveInText);
-            } catch (NumberFormatException e) {
-                moveInYearInput.setError("首次入住年份必须是数字");
-                moveInYearInput.requestFocus();
-                return false;
-            }
+        try {
+            moveInYear = Integer.parseInt(
+                    moveInDate.substring(0, 4)
+            );
+        } catch (Exception e) {
+            Toast.makeText(
+                    this,
+                    "首次入住日期无效，请重新选择",
+                    Toast.LENGTH_LONG
+            ).show();
+            return false;
+        }
 
-            if (moveInYear < 1900 || moveInYear > 2052) {
-                moveInYearInput.setError(
-                        "目前支持的年份范围为1900—2052年");
-                moveInYearInput.requestFocus();
-                return false;
-            }
-
-            if (moveInYear < year) {
-                moveInYearInput.setError(
-                        "首次入住年份不能早于建造年份");
-                moveInYearInput.requestFocus();
-                return false;
-            }
+        if (moveInYear < year) {
+            Toast.makeText(
+                    this,
+                    "首次入住日期不能早于建造年份",
+                    Toast.LENGTH_LONG
+            ).show();
+            return false;
         }
 
         if (floorText.isEmpty()) {
@@ -629,16 +763,7 @@ public class ResidenceActivity extends Activity {
 
     private int getEffectiveMoveInYear() {
 
-        String moveInText =
-                moveInYearInput.getText().toString().trim();
-
-        if (moveInText.isEmpty()) {
-            return Integer.parseInt(
-                    buildingYearInput.getText().toString().trim()
-            );
-        }
-
-        return Integer.parseInt(moveInText);
+        return Integer.parseInt(moveInDate.substring(0, 4));
     }
 
     private void checkInformation() {
@@ -687,6 +812,7 @@ public class ResidenceActivity extends Activity {
         String summary =
                 "住宅名称：" + (name.isEmpty() ? "未填写" : name)
                 + "\n建造年份：" + year
+                + "\n首次入住日期：" + moveInDate
                 + "\n首次入住年份：" + moveInYear
                 + "\n所在楼层：" + floor
                 + "\n住宅面积：" + area + " 平方米"
@@ -731,6 +857,7 @@ public class ResidenceActivity extends Activity {
         data.name = name;
         data.buildingYear = year;
         data.moveInYear = moveInYear;
+        data.moveInDate = moveInDate;
         data.floor = floor;
         data.area = area;
 
@@ -779,6 +906,7 @@ public class ResidenceActivity extends Activity {
                             "住宅资料已经保存到手机本地数据库。\n\n"
                             + "住宅名称：" + name
                             + "\n建造年份：" + year
+                            + "\n首次入住日期：" + moveInDate
                             + "\n首次入住年份：" + moveInYear
                             + "\n所在楼层：" + floor
                             + "\n住宅面积：" + area + " 平方米"
