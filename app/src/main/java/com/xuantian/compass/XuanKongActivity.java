@@ -35,6 +35,8 @@ public class XuanKongActivity extends Activity {
     private double sittingAngle = -1;
 
     private LinearLayout root;
+    private LinearLayout chartContainer;
+
     private TextView titleText;
     private TextView infoText;
     private TextView centerText;
@@ -44,9 +46,16 @@ public class XuanKongActivity extends Activity {
     private final int GOLD = Color.rgb(220, 180, 105);
     private final int WHITE = Color.WHITE;
     private final int GRAY = Color.rgb(150, 140, 125);
+    private final int CELL_BG = Color.rgb(37, 30, 22);
 
     private static final TimeZone BEIJING =
             TimeZone.getTimeZone("GMT+08:00");
+
+    private static final int[][] PALACE_ORDER = {
+            {1, 5, 3},
+            {2, 0, 7},
+            {6, 4, 8}
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +65,6 @@ public class XuanKongActivity extends Activity {
         getWindow().setNavigationBarColor(BG);
 
         readResidenceData();
-
         createUI();
 
         try {
@@ -85,13 +93,13 @@ public class XuanKongActivity extends Activity {
                     "节气数据加载失败\n" + e.getMessage());
 
             centerText.setText("无法排盘");
-            grid.removeAllViews();
+
+            if (chartContainer != null) {
+                chartContainer.removeAllViews();
+            }
         }
     }
 
-    /**
-     * 接收住宅档案传来的资料
-     */
     private void readResidenceData() {
 
         if (!getIntent().hasExtra("residence_id")) {
@@ -139,9 +147,6 @@ public class XuanKongActivity extends Activity {
         }
     }
 
-    /**
-     * 根据首次入住日期，计算立春节气年份
-     */
     private int getEffectiveYearFromMoveInDate()
             throws Exception {
 
@@ -177,51 +182,49 @@ public class XuanKongActivity extends Activity {
     private void createUI() {
 
         ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
-        root.setPadding(dp(18), dp(16), dp(18), dp(16));
+        root.setPadding(dp(14), dp(12), dp(14), dp(20));
 
         scroll.addView(root);
 
         titleText = new TextView(this);
         titleText.setText("玄空飞星");
-        titleText.setTextSize(27);
+        titleText.setTextSize(25);
         titleText.setTextColor(GOLD);
         titleText.setTypeface(null, Typeface.BOLD);
         titleText.setGravity(Gravity.CENTER);
 
         root.addView(titleText,
-                new LinearLayout.LayoutParams(-1, dp(55)));
+                new LinearLayout.LayoutParams(-1, dp(58)));
 
         infoText = new TextView(this);
-        infoText.setTextSize(16);
+        infoText.setTextSize(15);
         infoText.setTextColor(WHITE);
         infoText.setGravity(Gravity.CENTER);
-        infoText.setLineSpacing(dp(8), 1f);
+        infoText.setLineSpacing(dp(5), 1f);
+        infoText.setPadding(dp(5), dp(8), dp(5), dp(8));
 
         root.addView(infoText,
-                new LinearLayout.LayoutParams(-1, dp(120)));
+                new LinearLayout.LayoutParams(-1, -2));
 
         centerText = new TextView(this);
-        centerText.setTextSize(20);
+        centerText.setTextSize(18);
         centerText.setTextColor(GOLD);
         centerText.setGravity(Gravity.CENTER);
 
         root.addView(centerText,
-                new LinearLayout.LayoutParams(-1, dp(50)));
+                new LinearLayout.LayoutParams(-1, dp(45)));
 
-        grid = new GridLayout(this);
-        grid.setColumnCount(3);
-        grid.setRowCount(3);
+        chartContainer = new LinearLayout(this);
+        chartContainer.setOrientation(LinearLayout.VERTICAL);
 
-        LinearLayout.LayoutParams gridParams =
-                new LinearLayout.LayoutParams(-1, dp(300));
-
-        gridParams.setMargins(dp(5), dp(10), dp(5), dp(10));
-
-        root.addView(grid, gridParams);
+        root.addView(chartContainer,
+                new LinearLayout.LayoutParams(-1, -2));
 
         if (!residenceMode) {
             createYearAndModeButtons();
@@ -233,8 +236,12 @@ public class XuanKongActivity extends Activity {
 
         backButton.setOnClickListener(v -> finish());
 
-        root.addView(backButton,
-                new LinearLayout.LayoutParams(-1, dp(55)));
+        LinearLayout.LayoutParams backParams =
+                new LinearLayout.LayoutParams(-1, dp(52));
+
+        backParams.setMargins(0, dp(16), 0, dp(8));
+
+        root.addView(backButton, backParams);
 
         TextView disclaimer = new TextView(this);
 
@@ -246,14 +253,11 @@ public class XuanKongActivity extends Activity {
         disclaimer.setGravity(Gravity.CENTER);
 
         root.addView(disclaimer,
-                new LinearLayout.LayoutParams(-1, dp(30)));
+                new LinearLayout.LayoutParams(-1, dp(35)));
 
         setContentView(scroll);
     }
 
-    /**
-     * 原有三元九运和流年飞星按钮
-     */
     private void createYearAndModeButtons() {
 
         LinearLayout yearRow = new LinearLayout(this);
@@ -336,14 +340,11 @@ public class XuanKongActivity extends Activity {
         button.setText(text);
         button.setTextColor(GOLD);
         button.setTextSize(15);
-        button.setBackgroundColor(Color.rgb(45, 36, 25));
+        button.setBackgroundColor(CELL_BG);
 
         return button;
     }
 
-    /**
-     * 原有三元九运及流年飞星显示
-     */
     private void updateChart() {
 
         if (!dataReady) return;
@@ -355,7 +356,7 @@ public class XuanKongActivity extends Activity {
 
             infoText.setText("暂不支持该年份的三元九运计算");
             centerText.setText("");
-            grid.removeAllViews();
+            chartContainer.removeAllViews();
 
             return;
         }
@@ -392,7 +393,7 @@ public class XuanKongActivity extends Activity {
         if (chart == null) {
             infoText.setText("排盘失败，请检查年份");
             centerText.setText("");
-            grid.removeAllViews();
+            chartContainer.removeAllViews();
             return;
         }
 
@@ -402,12 +403,13 @@ public class XuanKongActivity extends Activity {
                 + XuanKongCalculator.getStarName(
                         chart.centerStar));
 
-        buildGrid(chart.palaceStars);
+        chartContainer.removeAllViews();
+
+        grid = createNinePalaceGrid(chart.palaceStars);
+
+        chartContainer.addView(grid);
     }
 
-    /**
-     * 住宅专属玄空宅盘
-     */
     private void updateResidenceChart() {
 
         if (!dataReady) return;
@@ -418,7 +420,8 @@ public class XuanKongActivity extends Activity {
             titleText.setText("住宅宅盘");
             infoText.setText("住宅坐向资料不完整，无法排盘。");
             centerText.setText("");
-            grid.removeAllViews();
+            chartContainer.removeAllViews();
+
             return;
         }
 
@@ -430,75 +433,71 @@ public class XuanKongActivity extends Activity {
         if (chart == null) {
 
             titleText.setText("住宅宅盘");
+
             infoText.setText(
                     "住宅宅盘计算失败。\n"
                     + "请检查入住年份和坐山资料。");
 
             centerText.setText("");
-            grid.removeAllViews();
+            chartContainer.removeAllViews();
+
             return;
         }
 
         titleText.setText("住宅玄空宅盘");
+        centerText.setText("");
 
         infoText.setText(
                 "住宅名称：" + residenceName
                 + "\n首次入住：" + moveInDate
                 + "\n节气年份：" + currentYear
                 + "\n坐山：" + sittingMountain
-                + " · 朝向：" + facingMountain
+                + "    朝向：" + facingMountain
                 + "\n朝向角度：" + formatAngle(facingAngle)
-                + "° · 坐山角度：" + formatAngle(sittingAngle)
+                + "°    坐山角度：" + formatAngle(sittingAngle)
+                + "°"
         );
 
         showResidenceCharts(chart);
     }
 
-    /**
-     * 显示运盘、山盘、向盘三张九宫图
-     */
     private void showResidenceCharts(
             XuanKongCalculator.ResidenceChart chart) {
 
-        root.removeView(grid);
+        chartContainer.removeAllViews();
 
-        TextView periodTitle = createSectionTitle(
-                "一、运盘 · 中宫入运星");
+        addSectionTitle("一、运盘 · 中宫入运星");
+        chartContainer.addView(
+                createNinePalaceGrid(chart.periodStars));
 
-        root.addView(periodTitle);
-
-        addResidenceGrid(chart.periodStars);
-
-        TextView mountainTitle = createSectionTitle(
+        addSectionTitle(
                 "二、山盘 · 坐山：" + chart.sittingMountain);
 
-        root.addView(mountainTitle);
+        chartContainer.addView(
+                createNinePalaceGrid(chart.mountainStars));
 
-        addResidenceGrid(chart.mountainStars);
-
-        TextView facingTitle = createSectionTitle(
+        addSectionTitle(
                 "三、向盘 · 朝向：" + chart.facingMountain);
 
-        root.addView(facingTitle);
-
-        addResidenceGrid(chart.facingStars);
+        chartContainer.addView(
+                createNinePalaceGrid(chart.facingStars));
 
         TextView note = new TextView(this);
 
         note.setText(
                 "说明：本页按当前选定的下卦法基础规则排盘，"
-                + "暂未处理兼向、替卦。"
-        );
+                + "暂未处理兼向、替卦。");
 
         note.setTextColor(GRAY);
         note.setTextSize(13);
         note.setGravity(Gravity.CENTER);
-        note.setPadding(0, dp(15), 0, dp(15));
+        note.setLineSpacing(dp(4), 1f);
+        note.setPadding(dp(8), dp(14), dp(8), dp(14));
 
-        root.addView(note);
+        chartContainer.addView(note);
     }
 
-    private TextView createSectionTitle(String text) {
+    private void addSectionTitle(String text) {
 
         TextView title = new TextView(this);
 
@@ -507,79 +506,63 @@ public class XuanKongActivity extends Activity {
         title.setTextSize(18);
         title.setTypeface(null, Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(18), 0, dp(8));
+        title.setPadding(dp(4), dp(18), dp(4), dp(12));
 
-        return title;
+        chartContainer.addView(title,
+                new LinearLayout.LayoutParams(-1, -2));
     }
 
-    /**
-     * 住宅九宫盘使用相同的宫位排列
-     */
-    private void addResidenceGrid(int[] stars) {
+    private GridLayout createNinePalaceGrid(int[] stars) {
+
+        GridLayout result = new GridLayout(this);
+
+        result.setColumnCount(3);
+        result.setRowCount(3);
+        result.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
+        result.setUseDefaultMargins(false);
+
+        LinearLayout.LayoutParams gridParams =
+                new LinearLayout.LayoutParams(-1, dp(306));
+
+        gridParams.setMargins(dp(2), dp(2), dp(2), dp(10));
+
+        result.setLayoutParams(gridParams);
 
         if (stars == null || stars.length != 9) {
-            return;
+            return result;
         }
-
-        GridLayout residenceGrid = new GridLayout(this);
-
-        residenceGrid.setColumnCount(3);
-        residenceGrid.setRowCount(3);
-
-        LinearLayout.LayoutParams params =
-                new LinearLayout.LayoutParams(-1, dp(270));
-
-        params.setMargins(dp(5), dp(5), dp(5), dp(10));
-
-        root.addView(residenceGrid, params);
-
-        int[][] order = {
-                {1, 5, 3},
-                {2, 0, 7},
-                {6, 4, 8}
-        };
 
         for (int row = 0; row < 3; row++) {
 
             for (int col = 0; col < 3; col++) {
 
-                int index = order[row][col];
+                int index = PALACE_ORDER[row][col];
 
-                addPalaceToGrid(
-                        residenceGrid,
-                        index,
-                        stars[index]);
+                LinearLayout cell =
+                        createPalaceCell(index, stars[index]);
+
+                GridLayout.LayoutParams params =
+                        new GridLayout.LayoutParams();
+
+                params.width = 0;
+                params.height = dp(98);
+
+                params.columnSpec = GridLayout.spec(
+                        col, 1f);
+
+                params.rowSpec = GridLayout.spec(row);
+
+                params.setMargins(
+                        dp(3), dp(3), dp(3), dp(3));
+
+                result.addView(cell, params);
             }
         }
+
+        return result;
     }
 
-    private void buildGrid(
-            int[] stars) {
-
-        grid.removeAllViews();
-
-        int[][] order = {
-                {1, 5, 3},
-                {2, 0, 7},
-                {6, 4, 8}
-        };
-
-        for (int row = 0; row < 3; row++) {
-
-            for (int col = 0; col < 3; col++) {
-
-                int index = order[row][col];
-
-                addPalaceToGrid(
-                        grid,
-                        index,
-                        stars[index]);
-            }
-        }
-    }
-
-    private void addPalaceToGrid(
-            GridLayout target,
+    private LinearLayout createPalaceCell(
             int index,
             int star) {
 
@@ -587,7 +570,8 @@ public class XuanKongActivity extends Activity {
 
         cell.setOrientation(LinearLayout.VERTICAL);
         cell.setGravity(Gravity.CENTER);
-        cell.setBackgroundColor(Color.rgb(37, 30, 22));
+        cell.setBackgroundColor(CELL_BG);
+        cell.setPadding(dp(2), dp(3), dp(2), dp(3));
 
         TextView palace = new TextView(this);
 
@@ -597,14 +581,23 @@ public class XuanKongActivity extends Activity {
         palace.setTextColor(GOLD);
         palace.setTextSize(13);
         palace.setGravity(Gravity.CENTER);
+        palace.setSingleLine(true);
+        palace.setIncludeFontPadding(false);
+
+        cell.addView(palace,
+                new LinearLayout.LayoutParams(-1, dp(23)));
 
         TextView starNumber = new TextView(this);
 
         starNumber.setText(String.valueOf(star));
         starNumber.setTextColor(WHITE);
-        starNumber.setTextSize(30);
+        starNumber.setTextSize(29);
         starNumber.setTypeface(Typeface.DEFAULT_BOLD);
         starNumber.setGravity(Gravity.CENTER);
+        starNumber.setIncludeFontPadding(false);
+
+        cell.addView(starNumber,
+                new LinearLayout.LayoutParams(-1, dp(38)));
 
         TextView starName = new TextView(this);
 
@@ -614,6 +607,11 @@ public class XuanKongActivity extends Activity {
         starName.setTextColor(GOLD);
         starName.setTextSize(12);
         starName.setGravity(Gravity.CENTER);
+        starName.setSingleLine(true);
+        starName.setIncludeFontPadding(false);
+
+        cell.addView(starName,
+                new LinearLayout.LayoutParams(-1, dp(21)));
 
         TextView element = new TextView(this);
 
@@ -623,27 +621,13 @@ public class XuanKongActivity extends Activity {
         element.setTextColor(GRAY);
         element.setTextSize(11);
         element.setGravity(Gravity.CENTER);
+        element.setSingleLine(true);
+        element.setIncludeFontPadding(false);
 
-        cell.addView(palace);
-        cell.addView(starNumber);
-        cell.addView(starName);
-        cell.addView(element);
+        cell.addView(element,
+                new LinearLayout.LayoutParams(-1, dp(19)));
 
-        GridLayout.LayoutParams params =
-                new GridLayout.LayoutParams();
-
-        params.width = 0;
-        params.height = 0;
-
-        params.columnSpec = GridLayout.spec(
-                GridLayout.UNDEFINED, 1f);
-
-        params.rowSpec = GridLayout.spec(
-                GridLayout.UNDEFINED, 1f);
-
-        params.setMargins(dp(3), dp(3), dp(3), dp(3));
-
-        target.addView(cell, params);
+        return cell;
     }
 
     private String formatAngle(double angle) {
@@ -659,10 +643,6 @@ public class XuanKongActivity extends Activity {
                 "%.2f",
                 angle);
     }
-
-    // ==============================
-    // 指定北京时间测试
-    // ==============================
 
     private void showTimeTestDialog() {
 
@@ -688,7 +668,6 @@ public class XuanKongActivity extends Activity {
         input.setSingleLine(true);
         input.setTextSize(16);
         input.setInputType(InputType.TYPE_CLASS_DATETIME);
-
         input.setHint("2024-02-04 16:00:00");
 
         layout.addView(input);
