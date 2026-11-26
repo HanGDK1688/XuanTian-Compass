@@ -57,6 +57,24 @@ public class XuanKongActivity extends Activity {
             {6, 4, 8}
     };
 
+    /*
+     * 八运子山午向固定校验数据。
+     * 数组索引：
+     * 0中宫、1乾、2兑、3艮、4离、
+     * 5坎、6坤、7震、8巽。
+     */
+    private static final int[] CHECK_PERIOD = {
+            8, 9, 1, 2, 3, 4, 5, 6, 7
+    };
+
+    private static final int[] CHECK_MOUNTAIN = {
+            4, 5, 6, 7, 8, 9, 1, 2, 3
+    };
+
+    private static final int[] CHECK_FACING = {
+            3, 2, 1, 9, 8, 7, 6, 5, 4
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -229,6 +247,7 @@ public class XuanKongActivity extends Activity {
         if (!residenceMode) {
             createYearAndModeButtons();
             createTimeTestButton();
+            createChartCheckButton();
         }
 
         Button backButton = createButton(
@@ -331,6 +350,20 @@ public class XuanKongActivity extends Activity {
 
         root.addView(testButton,
                 new LinearLayout.LayoutParams(-1, dp(55)));
+    }
+
+    private void createChartCheckButton() {
+
+        Button checkButton = createButton("玄空排盘算法校验");
+
+        checkButton.setOnClickListener(v -> runChartCheck());
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(-1, dp(55));
+
+        params.setMargins(0, dp(6), 0, dp(4));
+
+        root.addView(checkButton, params);
     }
 
     private Button createButton(String text) {
@@ -628,6 +661,147 @@ public class XuanKongActivity extends Activity {
                 new LinearLayout.LayoutParams(-1, dp(19)));
 
         return cell;
+    }
+
+    /*
+     * 独立校验：
+     * 使用固定案例八运子山午向，
+     * 将当前正式计算器输出与预设九宫数据逐项比较。
+     * 不修改正式算法。
+     */
+    private void runChartCheck() {
+
+        if (!dataReady) {
+            showCheckResult("校验无法开始：节气数据尚未加载。");
+            return;
+        }
+
+        XuanKongCalculator.ResidenceChart chart =
+                XuanKongCalculator.getResidenceChart(
+                        2020, "子");
+
+        if (chart == null) {
+            showCheckResult(
+                    "校验失败：计算器没有返回排盘结果。");
+            return;
+        }
+
+        int passed = 0;
+        int failed = 0;
+
+        StringBuilder result = new StringBuilder();
+
+        result.append("固定案例：八运子山午向\n");
+        result.append("校验年份：2020\n\n");
+
+        result.append("中宫入中星：\n");
+        result.append("运盘：").append(chart.periodStars[0])
+                .append("（预期8）\n");
+        result.append("山盘：").append(chart.mountainCenterStar)
+                .append("（预期4）\n");
+        result.append("向盘：").append(chart.facingCenterStar)
+                .append("（预期3）\n\n");
+
+        result.append("顺逆飞方向：\n");
+        result.append("山盘：").append(chart.mountainDirection)
+                .append("（预期顺飞）\n");
+        result.append("向盘：").append(chart.facingDirection)
+                .append("（预期逆飞）\n\n");
+
+        result.append("逐宫校验：\n");
+
+        for (int i = 0; i < 9; i++) {
+
+            boolean periodOK =
+                    chart.periodStars[i] == CHECK_PERIOD[i];
+
+            boolean mountainOK =
+                    chart.mountainStars[i] == CHECK_MOUNTAIN[i];
+
+            boolean facingOK =
+                    chart.facingStars[i] == CHECK_FACING[i];
+
+            if (periodOK) passed++;
+            else failed++;
+
+            if (mountainOK) passed++;
+            else failed++;
+
+            if (facingOK) passed++;
+            else failed++;
+
+            result.append(XuanKongCalculator.getPalaceName(i))
+                    .append("：");
+
+            result.append("运")
+                    .append(chart.periodStars[i])
+                    .append(periodOK ? "✓ " : "× ");
+
+            result.append("山")
+                    .append(chart.mountainStars[i])
+                    .append(mountainOK ? "✓ " : "× ");
+
+            result.append("向")
+                    .append(chart.facingStars[i])
+                    .append(facingOK ? "✓" : "×");
+
+            result.append("\n");
+        }
+
+        boolean centerOK =
+                chart.periodStars[0] == 8
+                && chart.mountainCenterStar == 4
+                && chart.facingCenterStar == 3;
+
+        boolean directionOK =
+                chart.mountainForward
+                && !chart.facingForward;
+
+        result.append("\n九宫数据：")
+                .append(passed)
+                .append("项通过，")
+                .append(failed)
+                .append("项不通过。\n");
+
+        result.append("中宫检查：")
+                .append(centerOK ? "通过" : "不通过")
+                .append("\n");
+
+        result.append("顺逆检查：")
+                .append(directionOK ? "通过" : "不通过")
+                .append("\n\n");
+
+        boolean allOK =
+                failed == 0 && centerOK && directionOK;
+
+        result.append("最终结果：")
+                .append(allOK ? "校验通过" : "校验未通过");
+
+        result.append(
+                "\n\n注意：本测试只核对当前程序与固定案例数据是否一致，"
+                + "不代表所有玄空流派规则均已得到验证。");
+
+        showCheckResult(result.toString());
+    }
+
+    private void showCheckResult(String message) {
+
+        TextView text = new TextView(this);
+
+        text.setText(message);
+        text.setTextColor(Color.BLACK);
+        text.setTextSize(15);
+        text.setLineSpacing(dp(4), 1f);
+        text.setPadding(dp(18), dp(12), dp(18), dp(12));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(text);
+
+        new AlertDialog.Builder(this)
+                .setTitle("玄空排盘算法校验")
+                .setView(scroll)
+                .setPositiveButton("确定", null)
+                .show();
     }
 
     private String formatAngle(double angle) {
