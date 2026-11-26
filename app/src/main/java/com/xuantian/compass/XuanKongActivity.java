@@ -57,12 +57,6 @@ public class XuanKongActivity extends Activity {
             {6, 4, 8}
     };
 
-    /*
-     * 八运子山午向固定校验数据。
-     * 数组索引：
-     * 0中宫、1乾、2兑、3艮、4离、
-     * 5坎、6坤、7震、8巽。
-     */
     private static final int[] CHECK_PERIOD = {
             8, 9, 1, 2, 3, 4, 5, 6, 7
     };
@@ -515,11 +509,44 @@ public class XuanKongActivity extends Activity {
         chartContainer.addView(
                 createNinePalaceGrid(chart.facingStars));
 
+        // 新增：八宅分析
+        addSectionTitle("四、八宅分析");
+
+        EightMansionsCalculator.Result eightResult =
+                EightMansionsCalculator.calculate(
+                        chart.sittingMountain);
+
+        TextView eightText = new TextView(this);
+
+        if (eightResult == null) {
+
+            eightText.setText(
+                    "坐山资料无效，暂时无法进行八宅分析。");
+
+        } else {
+
+            eightText.setText(
+                    EightMansionsCalculator.format(eightResult));
+        }
+
+        eightText.setTextColor(WHITE);
+        eightText.setTextSize(15);
+        eightText.setLineSpacing(dp(7), 1f);
+        eightText.setPadding(
+                dp(16), dp(14), dp(16), dp(14));
+
+        eightText.setBackgroundColor(CELL_BG);
+
+        chartContainer.addView(eightText,
+                new LinearLayout.LayoutParams(-1, -2));
+
         TextView note = new TextView(this);
 
         note.setText(
-                "说明：本页按当前选定的下卦法基础规则排盘，"
-                + "暂未处理兼向、替卦。");
+                "说明：玄空三盘按当前选定的下卦法基础规则排盘，"
+                + "暂未处理兼向、替卦。\n"
+                + "八宅分析按住宅坐山所属宅卦计算，"
+                + "不涉及户主命卦。");
 
         note.setTextColor(GRAY);
         note.setTextSize(13);
@@ -663,12 +690,6 @@ public class XuanKongActivity extends Activity {
         return cell;
     }
 
-    /*
-     * 独立校验：
-     * 使用固定案例八运子山午向，
-     * 将当前正式计算器输出与预设九宫数据逐项比较。
-     * 不修改正式算法。
-     */
     private void runChartCheck() {
 
         if (!dataReady) {
