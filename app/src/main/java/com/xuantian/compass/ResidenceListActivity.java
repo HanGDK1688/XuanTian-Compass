@@ -3,6 +3,7 @@ package com.xuantian.compass;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -270,9 +271,15 @@ public class ResidenceListActivity extends Activity {
         actions.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView detailButton = createSmallButton(
-                "查看详情",
+                "详情",
                 cardBackground,
                 gold
+        );
+
+        TextView analysisButton = createSmallButton(
+                "宅盘分析",
+                Color.rgb(100, 65, 32),
+                Color.WHITE
         );
 
         TextView editButton = createSmallButton(
@@ -294,19 +301,76 @@ public class ResidenceListActivity extends Activity {
                         1
                 );
 
-        actionParams.setMargins(dp(3), dp(5), dp(3), dp(5));
+        actionParams.setMargins(dp(2), dp(5), dp(2), dp(5));
 
         actions.addView(detailButton, actionParams);
+        actions.addView(analysisButton, actionParams);
         actions.addView(editButton, actionParams);
         actions.addView(deleteButton, actionParams);
 
         card.addView(actions);
 
         detailButton.setOnClickListener(v -> showDetails(data));
+        analysisButton.setOnClickListener(v -> openResidenceAnalysis(data));
         editButton.setOnClickListener(v -> showEditDialog(data));
         deleteButton.setOnClickListener(v -> confirmDelete(data));
 
         listContainer.addView(card, params(-1, -2));
+    }
+
+    /**
+     * 打开指定住宅的宅盘分析页面
+     */
+    private void openResidenceAnalysis(ResidenceData data) {
+
+        String moveInDate = getMoveInDate(data);
+
+        if (moveInDate.isEmpty()) {
+            Toast.makeText(
+                    this,
+                    "该住宅尚未记录具体首次入住日期，请先编辑档案补充。",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        if (data.facingAngle < 0
+                || data.facingAngle >= 360
+                || Double.isNaN(data.facingAngle)
+                || Double.isInfinite(data.facingAngle)) {
+
+            Toast.makeText(
+                    this,
+                    "该住宅尚未设置有效朝向角度，请先编辑档案。",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        double facingAngle =
+                TwentyFourMountains.normalizeAngle(data.facingAngle);
+
+        double sittingAngle =
+                TwentyFourMountains.normalizeAngle(facingAngle + 180);
+
+        String facingMountain =
+                TwentyFourMountains.getMountainName(facingAngle);
+
+        String sittingMountain =
+                TwentyFourMountains.getMountainName(sittingAngle);
+
+        Intent intent = new Intent(this, XuanKongActivity.class);
+
+        intent.putExtra("residence_id", data.id);
+        intent.putExtra("residence_name", data.name);
+        intent.putExtra("move_in_date", moveInDate);
+        intent.putExtra("move_in_year", getMoveInYear(data));
+        intent.putExtra("facing_angle", facingAngle);
+        intent.putExtra("facing_mountain", facingMountain);
+        intent.putExtra("sitting_angle", sittingAngle);
+        intent.putExtra("sitting_mountain", sittingMountain);
+
+        startActivity(intent);
     }
 
     /**
@@ -689,15 +753,12 @@ public class ResidenceListActivity extends Activity {
                             name = "未命名住宅";
                         }
 
-                        // 保留原来的档案编号
                         data.name = name;
                         data.buildingYear = year;
                         data.moveInDate = moveInDate;
                         data.moveInYear = moveInYear;
                         data.floor = floor;
                         data.area = area;
-
-                        // 更新坐向资料
                         data.facingAngle = facingAngle;
                         data.facingMountain = facingMountain;
 
@@ -728,9 +789,6 @@ public class ResidenceListActivity extends Activity {
         dialog.show();
     }
 
-    /**
-     * 更新首次入住日期按钮文字
-     */
     private void updateMoveInDateButton(
             TextView button,
             String date) {
@@ -742,9 +800,6 @@ public class ResidenceListActivity extends Activity {
         }
     }
 
-    /**
-     * 添加日期选择字段
-     */
     private void addDateFormField(
             LinearLayout parent,
             String label,
@@ -761,9 +816,6 @@ public class ResidenceListActivity extends Activity {
         parent.addView(button, params(-1, 52));
     }
 
-    /**
-     * 编辑时实时预览朝向和坐山
-     */
     private void updateEditDirectionPreview(
             TextView preview,
             String value) {
@@ -804,9 +856,6 @@ public class ResidenceListActivity extends Activity {
         }
     }
 
-    /**
-     * 创建编辑输入框
-     */
     private EditText createEditInput(
             String hint,
             String value,
@@ -824,9 +873,6 @@ public class ResidenceListActivity extends Activity {
         return input;
     }
 
-    /**
-     * 添加普通表单字段
-     */
     private void addFormField(
             LinearLayout parent,
             String label,
@@ -843,9 +889,6 @@ public class ResidenceListActivity extends Activity {
         parent.addView(input, params(-1, 52));
     }
 
-    /**
-     * 删除前确认
-     */
     private void confirmDelete(ResidenceData data) {
 
         new AlertDialog.Builder(this)
@@ -883,9 +926,6 @@ public class ResidenceListActivity extends Activity {
                 .show();
     }
 
-    /**
-     * 创建大按钮
-     */
     private TextView createButton(
             String text,
             int fillColor,
@@ -911,9 +951,6 @@ public class ResidenceListActivity extends Activity {
         return button;
     }
 
-    /**
-     * 创建档案卡片小按钮
-     */
     private TextView createSmallButton(
             String text,
             int fillColor,
@@ -939,9 +976,6 @@ public class ResidenceListActivity extends Activity {
         return button;
     }
 
-    /**
-     * 统一布局参数
-     */
     private LinearLayout.LayoutParams params(
             int width,
             int height) {
@@ -960,9 +994,6 @@ public class ResidenceListActivity extends Activity {
         return p;
     }
 
-    /**
-     * dp转换
-     */
     private int dp(float value) {
 
         return (int) (
