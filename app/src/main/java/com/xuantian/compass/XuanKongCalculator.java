@@ -7,8 +7,6 @@ import java.util.TimeZone;
 
 public class XuanKongCalculator {
 
-    // 洛书九宫顺飞路径：
-    // 中、西北、西、东北、南、北、西南、东、东南
     private static final int[] FLY_ORDER = {
             0, 1, 2, 3, 4, 5, 6, 7, 8
     };
@@ -40,9 +38,6 @@ public class XuanKongCalculator {
     private static final TimeZone BEIJING_TIME_ZONE =
             TimeZone.getTimeZone("GMT+08:00");
 
-    /*
-     * 二十四山顺序，与 TwentyFourMountains 保持一致。
-     */
     private static final String[] MOUNTAINS = {
             "子", "癸", "丑",
             "艮", "寅", "甲",
@@ -64,7 +59,7 @@ public class XuanKongCalculator {
      */
     private static final String[][] PALACE_MOUNTAINS = {
             {},
-            {"壬", "乾", "亥"},
+            {"戌", "乾", "亥"},
             {"庚", "酉", "辛"},
             {"丑", "艮", "寅"},
             {"丙", "午", "丁"},
@@ -80,10 +75,12 @@ public class XuanKongCalculator {
      *
      * true = 阳
      * false = 阴
+     *
+     * 采用当前项目选定的三元龙阴阳表。
      */
     private static final boolean[][] PALACE_YIN_YANG = {
             {},
-            {true, true, true},
+            {false, true, true},
             {true, false, false},
             {false, true, true},
             {true, false, false},
@@ -132,9 +129,6 @@ public class XuanKongCalculator {
         }
     }
 
-    /*
-     * 住宅完整三盘。
-     */
     public static class ResidenceChart {
         public int year;
         public int period;
@@ -162,17 +156,11 @@ public class XuanKongCalculator {
         }
     }
 
-    /**
-     * 初始化离线节气数据。
-     */
     public static void initialize(Context context) {
         SolarTermCalculator.load(
                 context.getApplicationContext());
     }
 
-    /**
-     * 查询年份所属三元九运。
-     */
     public static PeriodInfo getPeriod(int year) {
 
         int[][] periods = {
@@ -258,10 +246,6 @@ public class XuanKongCalculator {
         return p == null ? -1 : p.period;
     }
 
-    /**
-     * 流年年盘入中星。
-     * 保留原有程序公式。
-     */
     public static int getAnnualCenterStar(int year) {
 
         int difference = year - 2024;
@@ -293,20 +277,10 @@ public class XuanKongCalculator {
                 System.currentTimeMillis());
     }
 
-    /**
-     * 九宫顺飞。
-     */
     public static int[] flyFromCenter(int centerStar) {
-
         return flyFromCenter(centerStar, true);
     }
 
-    /**
-     * 九宫顺飞或逆飞。
-     *
-     * true：顺飞
-     * false：逆飞
-     */
     public static int[] flyFromCenter(
             int centerStar, boolean forward) {
 
@@ -489,9 +463,6 @@ public class XuanKongCalculator {
         return chart;
     }
 
-    /**
-     * 根据二十四山名称获取序号。
-     */
     public static int getMountainIndex(String mountain) {
 
         if (mountain == null) {
@@ -507,17 +478,18 @@ public class XuanKongCalculator {
         return -1;
     }
 
-    /**
-     * 获取二十四山所在宫位。
-     */
     public static int getMountainPalace(String mountain) {
+
+        if (mountain == null) {
+            return -1;
+        }
 
         for (int palace = 1; palace < 9; palace++) {
 
             for (int i = 0; i < 3; i++) {
 
                 if (PALACE_MOUNTAINS[palace][i]
-                        .equals(mountain)) {
+                        .equals(mountain.trim())) {
                     return palace;
                 }
             }
@@ -526,9 +498,6 @@ public class XuanKongCalculator {
         return -1;
     }
 
-    /**
-     * 获取某颗星原本所在的洛书宫位。
-     */
     private static int getStarOriginalPalace(int star) {
 
         switch (star) {
@@ -545,16 +514,6 @@ public class XuanKongCalculator {
         }
     }
 
-    /**
-     * 判断山星或向星的飞行方向。
-     *
-     * 一至九星：
-     * 在星原宫位中，寻找与原山向相同元龙的山，
-     * 根据该山的阴阳判断顺逆。
-     *
-     * 五黄入中：
-     * 暂按原坐山或向首本身的阴阳判断。
-     */
     private static boolean getStarFlyingDirection(
             int star, String originalMountain) {
 
@@ -598,13 +557,6 @@ public class XuanKongCalculator {
                 [originalDragon];
     }
 
-    /**
-     * 获取某山属于地、天、人哪一元龙。
-     *
-     * 0 = 地元龙
-     * 1 = 天元龙
-     * 2 = 人元龙
-     */
     private static int getDragonIndex(
             int palace, String mountain) {
 
@@ -668,9 +620,6 @@ public class XuanKongCalculator {
         return ELEMENTS[n];
     }
 
-    /**
-     * 原有九宫格显示方法。
-     */
     public static String formatChart(FlyingChart chart) {
 
         if (chart == null) {
@@ -715,9 +664,6 @@ public class XuanKongCalculator {
         return b.toString();
     }
 
-    /**
-     * 格式化住宅三盘，便于页面显示和测试。
-     */
     public static String formatResidenceChart(
             ResidenceChart chart) {
 
