@@ -7,6 +7,8 @@ import java.util.TimeZone;
 
 public class XuanKongCalculator {
 
+    // 洛书九宫顺飞路径：
+    // 中、西北、西、东北、南、北、西南、东、东南
     private static final int[] FLY_ORDER = {
             0, 1, 2, 3, 4, 5, 6, 7, 8
     };
@@ -37,6 +39,59 @@ public class XuanKongCalculator {
 
     private static final TimeZone BEIJING_TIME_ZONE =
             TimeZone.getTimeZone("GMT+08:00");
+
+    /*
+     * 二十四山顺序，与 TwentyFourMountains 保持一致。
+     */
+    private static final String[] MOUNTAINS = {
+            "子", "癸", "丑",
+            "艮", "寅", "甲",
+            "卯", "乙", "辰",
+            "巽", "巳", "丙",
+            "午", "丁", "未",
+            "坤", "申", "庚",
+            "酉", "辛", "戌",
+            "乾", "亥", "壬"
+    };
+
+    /*
+     * 每个宫位的三元龙顺序：
+     * 地元龙、天元龙、人元龙。
+     *
+     * 宫位索引：
+     * 0中宫，1乾，2兑，3艮，4离，
+     * 5坎，6坤，7震，8巽。
+     */
+    private static final String[][] PALACE_MOUNTAINS = {
+            {},
+            {"壬", "乾", "亥"},
+            {"庚", "酉", "辛"},
+            {"丑", "艮", "寅"},
+            {"丙", "午", "丁"},
+            {"壬", "子", "癸"},
+            {"未", "坤", "申"},
+            {"甲", "卯", "乙"},
+            {"辰", "巽", "巳"}
+    };
+
+    /*
+     * 三元龙阴阳：
+     * 地元龙、天元龙、人元龙。
+     *
+     * true = 阳
+     * false = 阴
+     */
+    private static final boolean[][] PALACE_YIN_YANG = {
+            {},
+            {true, true, true},
+            {true, false, false},
+            {false, true, true},
+            {true, false, false},
+            {true, false, false},
+            {false, true, true},
+            {true, false, false},
+            {false, true, true}
+    };
 
     public static class PeriodInfo {
         public int period;
@@ -77,9 +132,38 @@ public class XuanKongCalculator {
         }
     }
 
+    /*
+     * 住宅完整三盘。
+     */
+    public static class ResidenceChart {
+        public int year;
+        public int period;
+
+        public String sittingMountain;
+        public String facingMountain;
+
+        public int sittingPalace;
+        public int facingPalace;
+
+        public int mountainCenterStar;
+        public int facingCenterStar;
+
+        public boolean mountainForward;
+        public boolean facingForward;
+
+        public int[] periodStars;
+        public int[] mountainStars;
+        public int[] facingStars;
+
+        public String mountainDirection;
+        public String facingDirection;
+
+        public ResidenceChart() {
+        }
+    }
+
     /**
      * 初始化离线节气数据。
-     * 应在 Activity 中调用一次。
      */
     public static void initialize(Context context) {
         SolarTermCalculator.load(
@@ -88,7 +172,6 @@ public class XuanKongCalculator {
 
     /**
      * 查询年份所属三元九运。
-     * 这里传入的是已经确定的节气年份。
      */
     public static PeriodInfo getPeriod(int year) {
 
@@ -110,15 +193,14 @@ public class XuanKongCalculator {
                     && year <= periods[i][1]) {
 
                 int n = i + 1;
-
                 String name;
 
                 if (n <= 3) {
-                   name = "上元第" + n + "运";
+                    name = "上元第" + n + "运";
                 } else if (n <= 6) {
-                   name = "中元第" + n + "运";
+                    name = "中元第" + n + "运";
                 } else {
-                   name = "下元第" + n + "运";
+                    name = "下元第" + n + "运";
                 }
 
                 return new PeriodInfo(
@@ -133,9 +215,6 @@ public class XuanKongCalculator {
         return null;
     }
 
-    /**
-     * 根据一个北京时间时间戳查询当前九运。
-     */
     public static PeriodInfo getPeriodAt(
             long beijingTimestamp) {
 
@@ -146,27 +225,16 @@ public class XuanKongCalculator {
         return getPeriod(effectiveYear);
     }
 
-    /**
-     * 获取当前北京时间对应的节气年份。
-     */
     public static int getCurrentEffectiveYear() {
-
         return SolarTermCalculator
                 .getCurrentEffectiveYear();
     }
 
-    /**
-     * 获取当前北京时间对应的九运。
-     */
     public static PeriodInfo getCurrentPeriod() {
-
         return getPeriodAt(
                 System.currentTimeMillis());
     }
 
-    /**
-     * 获取北京时间当前公历年份。
-     */
     public static int getCurrentYear() {
 
         Calendar calendar = Calendar.getInstance(
@@ -175,9 +243,6 @@ public class XuanKongCalculator {
         return calendar.get(Calendar.YEAR);
     }
 
-    /**
-     * 运盘入中星。
-     */
     public static int getPeriodCenterStar(int year) {
 
         PeriodInfo p = getPeriod(year);
@@ -185,9 +250,6 @@ public class XuanKongCalculator {
         return p == null ? -1 : p.period;
     }
 
-    /**
-     * 根据指定北京时间时刻计算运盘入中星。
-     */
     public static int getPeriodCenterStarAt(
             long beijingTimestamp) {
 
@@ -198,7 +260,7 @@ public class XuanKongCalculator {
 
     /**
      * 流年年盘入中星。
-     * 2024年为三碧入中，之后每年逆行一位。
+     * 保留原有程序公式。
      */
     public static int getAnnualCenterStar(int year) {
 
@@ -216,10 +278,6 @@ public class XuanKongCalculator {
         return result;
     }
 
-    /**
-     * 根据北京时间时刻计算流年入中星。
-     * 立春前使用上一节气年份。
-     */
     public static int getAnnualCenterStarAt(
             long beijingTimestamp) {
 
@@ -230,11 +288,7 @@ public class XuanKongCalculator {
         return getAnnualCenterStar(effectiveYear);
     }
 
-    /**
-     * 获取当前流年入中星。
-     */
     public static int getCurrentAnnualCenterStar() {
-
         return getAnnualCenterStarAt(
                 System.currentTimeMillis());
     }
@@ -244,17 +298,37 @@ public class XuanKongCalculator {
      */
     public static int[] flyFromCenter(int centerStar) {
 
+        return flyFromCenter(centerStar, true);
+    }
+
+    /**
+     * 九宫顺飞或逆飞。
+     *
+     * true：顺飞
+     * false：逆飞
+     */
+    public static int[] flyFromCenter(
+            int centerStar, boolean forward) {
+
         int[] result = new int[9];
 
         if (centerStar < 1 || centerStar > 9) {
             return result;
         }
 
-        for (int i = 0; i < FLY_ORDER.length; i++) {
+        for (int i = 0; i < 9; i++) {
+
+            int orderIndex;
+
+            if (forward) {
+                orderIndex = i;
+            } else {
+                orderIndex = (9 - i) % 9;
+            }
 
             int palaceIndex = FLY_ORDER[i];
 
-            int star = centerStar + i;
+            int star = centerStar + orderIndex;
 
             while (star > 9) {
                 star -= 9;
@@ -266,9 +340,6 @@ public class XuanKongCalculator {
         return result;
     }
 
-    /**
-     * 获取运盘。
-     */
     public static FlyingChart getPeriodChart(int year) {
 
         int center = getPeriodCenterStar(year);
@@ -280,9 +351,6 @@ public class XuanKongCalculator {
         return new FlyingChart(center, year);
     }
 
-    /**
-     * 根据指定北京时间时刻获取运盘。
-     */
     public static FlyingChart getPeriodChartAt(
             long beijingTimestamp) {
 
@@ -299,9 +367,6 @@ public class XuanKongCalculator {
         return new FlyingChart(center, effectiveYear);
     }
 
-    /**
-     * 获取流年盘。
-     */
     public static FlyingChart getAnnualChart(int year) {
 
         return new FlyingChart(
@@ -310,9 +375,6 @@ public class XuanKongCalculator {
         );
     }
 
-    /**
-     * 根据指定北京时间时刻获取流年盘。
-     */
     public static FlyingChart getAnnualChartAt(
             long beijingTimestamp) {
 
@@ -324,6 +386,241 @@ public class XuanKongCalculator {
                 getAnnualCenterStar(effectiveYear),
                 effectiveYear
         );
+    }
+
+    /**
+     * 获取住宅三盘。
+     *
+     * year：已经按入住日期及立春确定的节气年份。
+     * sittingMountain：坐山，例如“卯”。
+     *
+     * 朝向自动取坐山相反的二十四山。
+     */
+    public static ResidenceChart getResidenceChart(
+            int year, String sittingMountain) {
+
+        int sittingIndex = getMountainIndex(
+                sittingMountain);
+
+        if (sittingIndex < 0) {
+            return null;
+        }
+
+        int facingIndex = (sittingIndex + 12) % 24;
+
+        String facingMountain =
+                MOUNTAINS[facingIndex];
+
+        PeriodInfo periodInfo = getPeriod(year);
+
+        if (periodInfo == null) {
+            return null;
+        }
+
+        int sittingPalace =
+                getMountainPalace(sittingMountain);
+
+        int facingPalace =
+                getMountainPalace(facingMountain);
+
+        if (sittingPalace < 1 || facingPalace < 1) {
+            return null;
+        }
+
+        FlyingChart periodChart =
+                getPeriodChart(year);
+
+        if (periodChart == null) {
+            return null;
+        }
+
+        int mountainCenter =
+                periodChart.palaceStars[sittingPalace];
+
+        int facingCenter =
+                periodChart.palaceStars[facingPalace];
+
+        boolean mountainForward =
+                getStarFlyingDirection(
+                        mountainCenter,
+                        sittingMountain);
+
+        boolean facingForward =
+                getStarFlyingDirection(
+                        facingCenter,
+                        facingMountain);
+
+        ResidenceChart chart = new ResidenceChart();
+
+        chart.year = year;
+        chart.period = periodInfo.period;
+
+        chart.sittingMountain = sittingMountain;
+        chart.facingMountain = facingMountain;
+
+        chart.sittingPalace = sittingPalace;
+        chart.facingPalace = facingPalace;
+
+        chart.mountainCenterStar = mountainCenter;
+        chart.facingCenterStar = facingCenter;
+
+        chart.mountainForward = mountainForward;
+        chart.facingForward = facingForward;
+
+        chart.periodStars =
+                periodChart.palaceStars.clone();
+
+        chart.mountainStars =
+                flyFromCenter(
+                        mountainCenter,
+                        mountainForward);
+
+        chart.facingStars =
+                flyFromCenter(
+                        facingCenter,
+                        facingForward);
+
+        chart.mountainDirection =
+                mountainForward ? "顺飞" : "逆飞";
+
+        chart.facingDirection =
+                facingForward ? "顺飞" : "逆飞";
+
+        return chart;
+    }
+
+    /**
+     * 根据二十四山名称获取序号。
+     */
+    public static int getMountainIndex(String mountain) {
+
+        if (mountain == null) {
+            return -1;
+        }
+
+        for (int i = 0; i < MOUNTAINS.length; i++) {
+            if (MOUNTAINS[i].equals(mountain.trim())) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * 获取二十四山所在宫位。
+     */
+    public static int getMountainPalace(String mountain) {
+
+        for (int palace = 1; palace < 9; palace++) {
+
+            for (int i = 0; i < 3; i++) {
+
+                if (PALACE_MOUNTAINS[palace][i]
+                        .equals(mountain)) {
+                    return palace;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * 获取某颗星原本所在的洛书宫位。
+     */
+    private static int getStarOriginalPalace(int star) {
+
+        switch (star) {
+            case 1: return 5;
+            case 2: return 6;
+            case 3: return 7;
+            case 4: return 8;
+            case 5: return 0;
+            case 6: return 1;
+            case 7: return 2;
+            case 8: return 3;
+            case 9: return 4;
+            default: return -1;
+        }
+    }
+
+    /**
+     * 判断山星或向星的飞行方向。
+     *
+     * 一至九星：
+     * 在星原宫位中，寻找与原山向相同元龙的山，
+     * 根据该山的阴阳判断顺逆。
+     *
+     * 五黄入中：
+     * 暂按原坐山或向首本身的阴阳判断。
+     */
+    private static boolean getStarFlyingDirection(
+            int star, String originalMountain) {
+
+        int originalIndex =
+                getMountainIndex(originalMountain);
+
+        if (originalIndex < 0) {
+            return true;
+        }
+
+        int originalPalace =
+                getMountainPalace(originalMountain);
+
+        if (originalPalace < 1) {
+            return true;
+        }
+
+        int originalDragon =
+                getDragonIndex(
+                        originalPalace,
+                        originalMountain);
+
+        if (originalDragon < 0) {
+            return true;
+        }
+
+        if (star == 5) {
+
+            return PALACE_YIN_YANG[originalPalace]
+                    [originalDragon];
+        }
+
+        int starPalace =
+                getStarOriginalPalace(star);
+
+        if (starPalace < 1) {
+            return true;
+        }
+
+        return PALACE_YIN_YANG[starPalace]
+                [originalDragon];
+    }
+
+    /**
+     * 获取某山属于地、天、人哪一元龙。
+     *
+     * 0 = 地元龙
+     * 1 = 天元龙
+     * 2 = 人元龙
+     */
+    private static int getDragonIndex(
+            int palace, String mountain) {
+
+        if (palace < 1 || palace > 8) {
+            return -1;
+        }
+
+        for (int i = 0; i < 3; i++) {
+
+            if (PALACE_MOUNTAINS[palace][i]
+                    .equals(mountain)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public static StarInfo getStarInfo(int n) {
@@ -372,7 +669,7 @@ public class XuanKongCalculator {
     }
 
     /**
-     * 传统九宫格显示。
+     * 原有九宫格显示方法。
      */
     public static String formatChart(FlyingChart chart) {
 
@@ -414,6 +711,77 @@ public class XuanKongCalculator {
 
             b.append("\n");
         }
+
+        return b.toString();
+    }
+
+    /**
+     * 格式化住宅三盘，便于页面显示和测试。
+     */
+    public static String formatResidenceChart(
+            ResidenceChart chart) {
+
+        if (chart == null) {
+            return "住宅排盘数据不完整";
+        }
+
+        StringBuilder b = new StringBuilder();
+
+        b.append("住宅节气年份：")
+                .append(chart.year)
+                .append("\n");
+
+        b.append("所属元运：")
+                .append(chart.period)
+                .append("运\n");
+
+        b.append("坐山：")
+                .append(chart.sittingMountain)
+                .append("\n");
+
+        b.append("朝向：")
+                .append(chart.facingMountain)
+                .append("\n\n");
+
+        b.append("运盘、山盘、向盘\n");
+
+        int[][] order = {
+                {1, 5, 3},
+                {2, 0, 7},
+                {6, 4, 8}
+        };
+
+        for (int[] row : order) {
+
+            for (int index : row) {
+
+                b.append(getPalaceName(index))
+                        .append("\n");
+
+                b.append("运：")
+                        .append(chart.periodStars[index])
+                        .append("  ");
+
+                b.append("山：")
+                        .append(chart.mountainStars[index])
+                        .append("  ");
+
+                b.append("向：")
+                        .append(chart.facingStars[index])
+                        .append("\n\n");
+            }
+        }
+
+        b.append("山星：")
+                .append(chart.mountainCenterStar)
+                .append("入中，")
+                .append(chart.mountainDirection)
+                .append("\n");
+
+        b.append("向星：")
+                .append(chart.facingCenterStar)
+                .append("入中，")
+                .append(chart.facingDirection);
 
         return b.toString();
     }
