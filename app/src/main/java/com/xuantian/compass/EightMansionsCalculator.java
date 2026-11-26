@@ -1,58 +1,114 @@
 package com.xuantian.compass;
 
 /**
- * 八宅游年法基础计算器。
+ * 八宅游年法计算器。
  *
- * 本项目当前采用：
- * 住宅坐山所属八卦宫位确定宅卦，
- * 再按八宅游年法判断八个方位。
+ * 当前采用：
+ * 1. 住宅坐山所属后天八卦宫位定宅卦。
+ * 2. 以宅卦本宫为伏位。
+ * 3. 按八宅大游年法排列八方吉凶。
  *
- * 不使用户主出生年份命卦。
+ * 不计算户主出生年份命卦。
+ *
+ * 方位顺序：
+ * 北、东北、东、东南、南、西南、西、西北。
  */
 public class EightMansionsCalculator {
 
     public static class Result {
+
         public String sittingMountain;
         public String houseName;
         public String houseTrigram;
+        public String houseGroup;
+
         public String[] directions;
         public String[] fortunes;
+        public String[] starNames;
         public boolean[] auspicious;
 
         public Result() {
             directions = new String[8];
             fortunes = new String[8];
+            starNames = new String[8];
             auspicious = new boolean[8];
         }
     }
 
     private static final String[] DIRECTIONS = {
-            "北方", "东北", "东方", "东南",
-            "南方", "西南", "西方", "西北"
+            "北方（坎）",
+            "东北（艮）",
+            "东方（震）",
+            "东南（巽）",
+            "南方（离）",
+            "西南（坤）",
+            "西方（兑）",
+            "西北（乾）"
     };
 
     /*
-     * 八宅方位排列：
-     * 北、东北、东、东南、南、西南、西、西北。
-     *
-     * 每一行依次对应：
-     * 生气、天医、延年、伏位、
-     * 绝命、五鬼、六煞、祸害。
+     * 星名编号：
+     * 0 生气
+     * 1 天医
+     * 2 延年
+     * 3 伏位
+     * 4 绝命
+     * 5 五鬼
+     * 6 六煞
+     * 7 祸害
      */
     private static final String[] STAR_NAMES = {
-            "生气", "天医", "延年", "伏位",
-            "绝命", "五鬼", "六煞", "祸害"
+            "生气",
+            "天医",
+            "延年",
+            "伏位",
+            "绝命",
+            "五鬼",
+            "六煞",
+            "祸害"
+    };
+
+    private static final String[] STAR_DETAILS = {
+            "贪狼木 · 上吉",
+            "巨门土 · 次吉",
+            "武曲金 · 中吉",
+            "辅弼木 · 小吉",
+            "破军金 · 大凶",
+            "廉贞火 · 中凶",
+            "文曲水 · 次凶",
+            "禄存土 · 小凶"
+    };
+
+    private static final String[] HOUSE_NAMES = {
+            "坎宅",
+            "艮宅",
+            "震宅",
+            "巽宅",
+            "离宅",
+            "坤宅",
+            "兑宅",
+            "乾宅"
+    };
+
+    private static final String[] HOUSE_TRIGRAMS = {
+            "坎",
+            "艮",
+            "震",
+            "巽",
+            "离",
+            "坤",
+            "兑",
+            "乾"
     };
 
     /*
-     * 每宅的八方吉凶。
-     * 方位索引：
-     * 0北坎、1东北艮、2东震、3东南巽、
-     * 4南离、5西南坤、6西兑、7西北乾。
+     * 方位顺序：
+     * 北、东北、东、东南、南、西南、西、西北。
      *
-     * 星名索引：
-     * 0生气、1天医、2延年、3伏位、
-     * 4绝命、5五鬼、6六煞、7祸害。
+     * 表格来源口径：
+     * 坐山起伏位的大游年法。
+     *
+     * 每个数字对应 STAR_NAMES 的编号。
      */
     private static final int[][] HOUSE_TABLE = {
 
@@ -60,40 +116,38 @@ public class EightMansionsCalculator {
             {3, 5, 1, 0, 2, 4, 7, 6},
 
             // 艮宅
-            {5, 3, 6, 4, 7, 0, 1, 2},
+            {5, 3, 6, 4, 7, 0, 2, 1},
 
             // 震宅
-            {1, 7, 3, 2, 0, 6, 4, 5},
+            {1, 6, 3, 2, 0, 7, 4, 5},
 
             // 巽宅
-            {0, 4, 2, 3, 1, 5, 7, 6},
+            {0, 4, 2, 3, 1, 5, 6, 7},
 
             // 离宅
-            {2, 6, 0, 1, 3, 7, 5, 4},
+            {2, 7, 0, 1, 3, 6, 5, 4},
 
             // 坤宅
-            {4, 2, 7, 5, 6, 3, 1, 0},
+            {4, 0, 7, 5, 6, 3, 1, 2},
 
             // 兑宅
-            {6, 1, 4, 7, 5, 2, 0, 3},
+            {7, 2, 4, 6, 5, 1, 3, 0},
 
             // 乾宅
-            {7, 0, 5, 6, 4, 1, 3, 2}
-    };
-
-    private static final String[] HOUSE_NAMES = {
-            "坎宅", "艮宅", "震宅", "巽宅",
-            "离宅", "坤宅", "兑宅", "乾宅"
-    };
-
-    private static final String[] HOUSE_TRIGRAMS = {
-            "坎", "艮", "震", "巽",
-            "离", "坤", "兑", "乾"
+            {6, 1, 5, 7, 4, 2, 0, 3}
     };
 
     /*
-     * 二十四山对应宅卦。
-     * 顺序与 XuanKongCalculator 的二十四山一致。
+     * 二十四山顺序与 XuanKongCalculator 保持一致。
+     *
+     * 子癸壬为坎宅
+     * 丑艮寅为艮宅
+     * 甲卯乙为震宅
+     * 辰巽巳为巽宅
+     * 丙午丁为离宅
+     * 未坤申为坤宅
+     * 庚酉辛为兑宅
+     * 戌乾亥为乾宅
      */
     private static final String[] MOUNTAINS = {
             "子", "癸", "丑",
@@ -107,12 +161,19 @@ public class EightMansionsCalculator {
     };
 
     /*
-     * 八卦宫位对应的宅卦索引：
-     * 0坎、1艮、2震、3巽、
-     * 4离、5坤、6兑、7乾。
+     * 二十四山对应宅卦编号：
+     *
+     * 0 坎
+     * 1 艮
+     * 2 震
+     * 3 巽
+     * 4 离
+     * 5 坤
+     * 6 兑
+     * 7 乾
      */
     private static final int[] MOUNTAIN_HOUSE = {
-            0, 0, 5,
+            0, 0, 1,
             1, 1, 2,
             2, 2, 3,
             3, 3, 4,
@@ -123,10 +184,7 @@ public class EightMansionsCalculator {
     };
 
     /**
-     * 根据住宅坐山计算八宅结果。
-     *
-     * @param sittingMountain 二十四山之一
-     * @return 八宅结果；坐山无效时返回 null
+     * 根据坐山计算八宅。
      */
     public static Result calculate(String sittingMountain) {
 
@@ -136,14 +194,7 @@ public class EightMansionsCalculator {
 
         String mountain = sittingMountain.trim();
 
-        int mountainIndex = -1;
-
-        for (int i = 0; i < MOUNTAINS.length; i++) {
-            if (MOUNTAINS[i].equals(mountain)) {
-                mountainIndex = i;
-                break;
-            }
-        }
+        int mountainIndex = getMountainIndex(mountain);
 
         if (mountainIndex < 0) {
             return null;
@@ -157,17 +208,44 @@ public class EightMansionsCalculator {
         result.houseName = HOUSE_NAMES[houseIndex];
         result.houseTrigram = HOUSE_TRIGRAMS[houseIndex];
 
+        result.houseGroup =
+                houseIndex == 0
+                || houseIndex == 2
+                || houseIndex == 3
+                || houseIndex == 4
+                ? "东四宅"
+                : "西四宅";
+
         for (int i = 0; i < 8; i++) {
 
             int starIndex = HOUSE_TABLE[houseIndex][i];
 
             result.directions[i] = DIRECTIONS[i];
+
             result.fortunes[i] = STAR_NAMES[starIndex];
 
-            result.auspicious[i] = starIndex <= 3;
+            result.starNames[i] = STAR_DETAILS[starIndex];
+
+            result.auspicious[i] =
+                    starIndex == 0
+                    || starIndex == 1
+                    || starIndex == 2
+                    || starIndex == 3;
         }
 
         return result;
+    }
+
+    private static int getMountainIndex(String mountain) {
+
+        for (int i = 0; i < MOUNTAINS.length; i++) {
+
+            if (MOUNTAINS[i].equals(mountain)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public static String getFortuneName(int index) {
@@ -188,6 +266,9 @@ public class EightMansionsCalculator {
         return DIRECTIONS[index];
     }
 
+    /**
+     * 输出完整八宅分析文字。
+     */
     public static String format(Result result) {
 
         if (result == null) {
@@ -196,8 +277,7 @@ public class EightMansionsCalculator {
 
         StringBuilder text = new StringBuilder();
 
-        text.append("八宅分析\n\n");
-        text.append("坐山：")
+        text.append("住宅坐山：")
                 .append(result.sittingMountain)
                 .append("\n");
 
@@ -205,7 +285,13 @@ public class EightMansionsCalculator {
                 .append(result.houseName)
                 .append("（")
                 .append(result.houseTrigram)
-                .append("卦）\n\n");
+                .append("卦）\n");
+
+        text.append("宅型：")
+                .append(result.houseGroup)
+                .append("\n");
+
+        text.append("起伏位：坐山本宫为伏位\n\n");
 
         text.append("八方吉凶：\n");
 
@@ -214,14 +300,20 @@ public class EightMansionsCalculator {
             text.append(result.directions[i])
                     .append("：")
                     .append(result.fortunes[i])
+                    .append(" · ")
+                    .append(result.starNames[i])
                     .append(result.auspicious[i]
                             ? "（吉方）"
                             : "（凶方）")
                     .append("\n");
         }
 
-        text.append("\n说明：本结果按住宅坐山所属宅卦计算，")
-                .append("不涉及户主命卦。");
+        text.append("\n四吉方：生气、天医、延年、伏位");
+
+        text.append("\n四凶方：绝命、五鬼、六煞、祸害");
+
+        text.append("\n\n说明：本结果按住宅坐山起伏位，")
+                .append("不涉及户主命卦，也不代表实际房间功能判断。");
 
         return text.toString();
     }
