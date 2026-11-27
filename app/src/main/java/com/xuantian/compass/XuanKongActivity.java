@@ -238,7 +238,6 @@ public class XuanKongActivity extends BaseActivity {
         root.addView(centerText,
                 new LinearLayout.LayoutParams(-1, dp(45)));
 
-        // V1.6：住宅模式增加流派选择
         if (residenceMode) {
             createReplacementRuleButtons();
         }
@@ -283,7 +282,7 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * V1.6：沈氏 / 中州规则切换。
+     * 沈氏 / 中州规则切换。
      */
     private void createReplacementRuleButtons() {
 
@@ -340,9 +339,6 @@ public class XuanKongActivity extends BaseActivity {
         updateRuleButtonState();
     }
 
-    /**
-     * 更新流派按钮状态。
-     */
     private void updateRuleButtonState() {
 
         if (shenRuleButton == null
@@ -584,7 +580,6 @@ public class XuanKongActivity extends BaseActivity {
         showResidenceCharts(chart);
     }
 
-    // 住宅三盘展示
     private void showResidenceCharts(
             XuanKongCalculator.ResidenceChart chart) {
 
@@ -691,7 +686,48 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * V1.6：分别计算坐山、朝向的替卦分析。
+     * 根据偏差方向取得真正的相邻山。
+     *
+     * 正偏差：顺时针，使用 nextMountain。
+     * 负偏差：逆时针，使用 previousMountain。
+     *
+     * 例如：
+     * 子山 +5度 -> 癸
+     * 子山 -5度 -> 壬
+     * 午山 +5度 -> 丁
+     * 午山 -5度 -> 丙
+     */
+    private String getAdjacentMountain(
+            XuanKongReplacementCalculator.AngleResult angleResult) {
+
+        if (angleResult == null) {
+            return "";
+        }
+
+        if (angleResult.deviation > 0) {
+
+            if (angleResult.nextMountain != null
+                    && !angleResult.nextMountain.trim().isEmpty()) {
+
+                return angleResult.nextMountain.trim();
+            }
+
+        } else if (angleResult.deviation < 0) {
+
+            if (angleResult.previousMountain != null
+                    && !angleResult.previousMountain.trim().isEmpty()) {
+
+                return angleResult.previousMountain.trim();
+            }
+        }
+
+        return angleResult.mountain == null
+                ? ""
+                : angleResult.mountain.trim();
+    }
+
+    /**
+     * 住宅替卦分析。
      */
     private void addReplacementAnalysis(
             XuanKongCalculator.ResidenceChart chart) {
@@ -765,6 +801,9 @@ public class XuanKongActivity extends BaseActivity {
             return;
         }
 
+        String adjacentMountain =
+                getAdjacentMountain(angleResult);
+
         result.append("测量角度：")
                 .append(formatAngle(angle))
                 .append("°\n");
@@ -781,8 +820,12 @@ public class XuanKongActivity extends BaseActivity {
                 .append(angleResult.classification)
                 .append("\n");
 
-        result.append("实际识别山向：")
+        result.append("中心所属山：")
                 .append(angleResult.mountain)
+                .append("\n");
+
+        result.append("实际兼向相邻山：")
+                .append(adjacentMountain)
                 .append("\n");
 
         result.append("兼向方向：")
@@ -818,19 +861,16 @@ public class XuanKongActivity extends BaseActivity {
         }
 
         /*
-         * 注意：
-         * savedMountain 是档案原山向。
-         * angleResult.mountain 是角度实际识别山向。
-         *
-         * 两者分别传入引擎，不再提前拦截。
+         * 档案原山向和实际兼向相邻山分别传递。
+         * 不因为两者不一致而阻止计算。
          */
         ResidenceReplacementEngine.Result replacement =
                 ResidenceReplacementEngine.calculate(
                         replacementRule,
                         originalStar,
                         savedMountain,
-                        angleResult.mountain,
-                        true
+                        adjacentMountain,
+                        angleResult.isReplacementGua
                 );
 
         appendEngineResult(
@@ -864,7 +904,7 @@ public class XuanKongActivity extends BaseActivity {
                 .append(replacement.originalMountain)
                 .append("\n");
 
-        result.append("实际相邻山向：")
+        result.append("实际兼向相邻山：")
                 .append(replacement.adjacentMountain)
                 .append("\n");
 
@@ -947,7 +987,7 @@ public class XuanKongActivity extends BaseActivity {
                             zhongzhou.originalPalace))
                     .append("\n");
 
-            result.append("实际山宫位：")
+            result.append("实际相邻山宫位：")
                     .append(getPalaceNameByIndex(
                             zhongzhou.adjacentPalace))
                     .append("\n");
@@ -989,7 +1029,7 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * V1.6：替卦候选盘直接使用 ResidenceReplacementEngine。
+     * 替卦候选盘。
      */
     private void showReplacementCandidateCharts(
             XuanKongCalculator.ResidenceChart chart) {
@@ -1096,17 +1136,20 @@ public class XuanKongActivity extends BaseActivity {
             return;
         }
 
+        String adjacentMountain =
+                getAdjacentMountain(angleResult);
+
         /*
-         * 不再要求档案山向必须等于角度识别山向。
-         * 两者作为独立参数进入规则引擎。
+         * 档案原山向与实际兼向相邻山分别传递。
+         * 这里不再把中心所属山误当成相邻山。
          */
         ResidenceReplacementEngine.Result replacement =
                 ResidenceReplacementEngine.calculate(
                         replacementRule,
                         originalStar,
                         savedMountain,
-                        angleResult.mountain,
-                        true
+                        adjacentMountain,
+                        angleResult.isReplacementGua
                 );
 
         if (replacement == null) {
@@ -1194,12 +1237,20 @@ public class XuanKongActivity extends BaseActivity {
                 .append(savedMountain)
                 .append("\n");
 
-        info.append("角度实际识别山向：")
+        info.append("中心所属山：")
                 .append(angleResult.mountain)
+                .append("\n");
+
+        info.append("实际兼向相邻山：")
+                .append(adjacentMountain)
                 .append("\n");
 
         info.append("角度：")
                 .append(formatAngle(angle))
+                .append("°\n");
+
+        info.append("偏离中心：")
+                .append(formatSignedAngle(angleResult.deviation))
                 .append("°\n");
 
         info.append("角度判定：")
@@ -1330,9 +1381,6 @@ public class XuanKongActivity extends BaseActivity {
         chartContainer.addView(comparison);
     }
 
-    /**
-     * 获取当前规则的顺逆方向文字。
-     */
     private String getDirectionText(
             ResidenceReplacementEngine.Rule rule,
             ResidenceReplacementEngine.Result result,
@@ -1364,9 +1412,6 @@ public class XuanKongActivity extends BaseActivity {
         return forward ? "顺飞" : "逆飞";
     }
 
-    /**
-     * 检查候选九宫盘是否有效。
-     */
     private boolean isValidCandidateChart(int[] stars) {
 
         if (stars == null || stars.length != 9) {
@@ -1485,7 +1530,6 @@ public class XuanKongActivity extends BaseActivity {
         );
     }
 
-    // 创建三盘合参九宫格
     private GridLayout createCombinedNinePalaceGrid(
             XuanKongCalculator.ResidenceChart chart) {
 
