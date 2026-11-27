@@ -573,8 +573,12 @@ public class XuanKongReplacementCalculator {
         result.methodB =
                 methodBYang ? "顺飞" : "逆飞";
 
-        result.hasReplacement =
-                originalStar != replacementStar;
+        // 已成功找到对应替卦山及有效替星。
+// 即使替星数字与原运星相同，也代表替卦计算有效。
+result.hasReplacement =
+        replacementMountain != null
+                && replacementStar >= 1
+                && replacementStar <= 9;
 
         StringBuilder detail = new StringBuilder();
 
