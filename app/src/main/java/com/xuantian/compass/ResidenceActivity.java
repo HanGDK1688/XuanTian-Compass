@@ -1,6 +1,5 @@
 package com.xuantian.compass;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.Intent;
@@ -19,7 +18,7 @@ import android.widget.Toast;
 import java.util.Calendar;
 import java.util.Locale;
 
-public class ResidenceActivity extends Activity {
+public class ResidenceActivity extends BaseActivity {
 
     private static final int REQUEST_COMPASS_DIRECTION = 1001;
 
@@ -421,7 +420,7 @@ public class ResidenceActivity extends Activity {
             return;
         }
 
-        if (resultCode != Activity.RESULT_OK || data == null) {
+        if (resultCode != RESULT_OK || data == null) {
             return;
         }
 
