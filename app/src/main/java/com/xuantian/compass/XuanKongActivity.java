@@ -1,6 +1,5 @@
 package com.xuantian.compass;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.graphics.Color;
@@ -19,7 +18,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class XuanKongActivity extends Activity {
+public class XuanKongActivity extends BaseActivity {
 
     private int currentYear;
     private boolean showAnnual = false;
@@ -509,7 +508,6 @@ public class XuanKongActivity extends Activity {
         chartContainer.addView(
                 createNinePalaceGrid(chart.facingStars));
 
-        // 新增：八宅分析
         addSectionTitle("四、八宅分析");
 
         EightMansionsCalculator.Result eightResult =
