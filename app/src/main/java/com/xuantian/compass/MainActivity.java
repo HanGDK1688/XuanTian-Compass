@@ -1,6 +1,5 @@
 package com.xuantian.compass;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 import android.content.Intent;
@@ -20,7 +19,7 @@ import android.widget.Button;
 import android.widget.Toast;
 import java.util.Locale;
 
-public class MainActivity extends Activity implements SensorEventListener {
+public class MainActivity extends BaseActivity implements SensorEventListener {
 
     private SensorManager sensorManager;
     private Sensor accelerometer;
@@ -170,7 +169,6 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         root.addView(calibration, new LinearLayout.LayoutParams(-1, dp(30)));
 
-        // 玄空飞星入口
         Button xuanKongButton = new Button(this);
         xuanKongButton.setText("玄空飞星排盘");
         xuanKongButton.setTextColor(Color.rgb(20, 17, 14));
@@ -192,7 +190,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             startActivity(intent);
         });
 
-        // V1.4 住宅风水分析入口
         Button residenceButton = new Button(this);
         residenceButton.setText("住宅风水分析");
         residenceButton.setTextColor(Color.rgb(20, 17, 14));
