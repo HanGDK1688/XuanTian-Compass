@@ -75,8 +75,6 @@ public class XuanKongCalculator {
      *
      * true = 阳
      * false = 阴
-     *
-     * 采用当前项目选定的三元龙阴阳表。
      */
     private static final boolean[][] PALACE_YIN_YANG = {
             {},
@@ -91,13 +89,18 @@ public class XuanKongCalculator {
     };
 
     public static class PeriodInfo {
+
         public int period;
         public int startYear;
         public int endYear;
         public String name;
 
-        public PeriodInfo(int period, int startYear,
-                          int endYear, String name) {
+        public PeriodInfo(
+                int period,
+                int startYear,
+                int endYear,
+                String name) {
+
             this.period = period;
             this.startYear = startYear;
             this.endYear = endYear;
@@ -106,11 +109,13 @@ public class XuanKongCalculator {
     }
 
     public static class StarInfo {
+
         public int number;
         public String name;
         public String element;
 
         public StarInfo(int number) {
+
             this.number = number;
             this.name = STAR_NAMES[number];
             this.element = ELEMENTS[number];
@@ -118,18 +123,51 @@ public class XuanKongCalculator {
     }
 
     public static class FlyingChart {
+
         public int centerStar;
         public int[] palaceStars;
         public int year;
 
         public FlyingChart(int centerStar, int year) {
+
             this.centerStar = centerStar;
             this.year = year;
-            this.palaceStars = flyFromCenter(centerStar);
+
+            this.palaceStars =
+                    flyFromCenter(centerStar);
         }
     }
 
+    /*
+     * 住宅三盘及替卦候选盘。
+     *
+     * 原有字段全部保留。
+     *
+     * 新增：
+     *
+     * mountainReplacementResult：
+     * 坐山替卦计算结果。
+     *
+     * facingReplacementResult：
+     * 朝向替卦计算结果。
+     *
+     * mountainReplacementStarsA：
+     * 坐山替卦方案A星盘。
+     *
+     * mountainReplacementStarsB：
+     * 坐山替卦方案B星盘。
+     *
+     * facingReplacementStarsA：
+     * 朝向替卦方案A星盘。
+     *
+     * facingReplacementStarsB：
+     * 朝向替卦方案B星盘。
+     *
+     * 注意：
+     * 这些是替卦候选盘，不代表已经确认采用某一流派。
+     */
     public static class ResidenceChart {
+
         public int year;
         public int period;
 
@@ -152,11 +190,32 @@ public class XuanKongCalculator {
         public String mountainDirection;
         public String facingDirection;
 
+        // 坐山替卦计算结果
+        public XuanKongReplacementCalculator.ReplacementResult
+                mountainReplacementResult;
+
+        // 朝向替卦计算结果
+        public XuanKongReplacementCalculator.ReplacementResult
+                facingReplacementResult;
+
+        // 坐山替卦方案A、方案B
+        public int[] mountainReplacementStarsA;
+        public int[] mountainReplacementStarsB;
+
+        // 朝向替卦方案A、方案B
+        public int[] facingReplacementStarsA;
+        public int[] facingReplacementStarsB;
+
+        // 替卦候选盘是否计算成功
+        public boolean mountainReplacementAvailable;
+        public boolean facingReplacementAvailable;
+
         public ResidenceChart() {
         }
     }
 
     public static void initialize(Context context) {
+
         SolarTermCalculator.load(
                 context.getApplicationContext());
     }
@@ -214,11 +273,13 @@ public class XuanKongCalculator {
     }
 
     public static int getCurrentEffectiveYear() {
+
         return SolarTermCalculator
                 .getCurrentEffectiveYear();
     }
 
     public static PeriodInfo getCurrentPeriod() {
+
         return getPeriodAt(
                 System.currentTimeMillis());
     }
@@ -273,16 +334,19 @@ public class XuanKongCalculator {
     }
 
     public static int getCurrentAnnualCenterStar() {
+
         return getAnnualCenterStarAt(
                 System.currentTimeMillis());
     }
 
     public static int[] flyFromCenter(int centerStar) {
+
         return flyFromCenter(centerStar, true);
     }
 
     public static int[] flyFromCenter(
-            int centerStar, boolean forward) {
+            int centerStar,
+            boolean forward) {
 
         int[] result = new int[9];
 
@@ -365,13 +429,17 @@ public class XuanKongCalculator {
     /**
      * 获取住宅三盘。
      *
-     * year：已经按入住日期及立春确定的节气年份。
-     * sittingMountain：坐山，例如“卯”。
+     * year：
+     * 已经按入住日期及立春确定的节气年份。
+     *
+     * sittingMountain：
+     * 坐山，例如“卯”。
      *
      * 朝向自动取坐山相反的二十四山。
      */
     public static ResidenceChart getResidenceChart(
-            int year, String sittingMountain) {
+            int year,
+            String sittingMountain) {
 
         int sittingIndex = getMountainIndex(
                 sittingMountain);
@@ -444,11 +512,13 @@ public class XuanKongCalculator {
         chart.periodStars =
                 periodChart.palaceStars.clone();
 
+        // 原有基础下卦山盘
         chart.mountainStars =
                 flyFromCenter(
                         mountainCenter,
                         mountainForward);
 
+        // 原有基础下卦向盘
         chart.facingStars =
                 flyFromCenter(
                         facingCenter,
@@ -460,7 +530,160 @@ public class XuanKongCalculator {
         chart.facingDirection =
                 facingForward ? "顺飞" : "逆飞";
 
+        /*
+         * 新增替卦候选盘计算。
+         *
+         * 注意：
+         * 这里只生成候选结果。
+         * 是否真正采用替卦，仍需要由角度分析决定。
+         */
+        calculateMountainReplacementCharts(chart);
+
+        calculateFacingReplacementCharts(chart);
+
         return chart;
+    }
+
+    /**
+     * 计算坐山替卦候选盘。
+     *
+     * 方案A、方案B分别生成独立九宫数组。
+     */
+    private static void calculateMountainReplacementCharts(
+            ResidenceChart chart) {
+
+        chart.mountainReplacementAvailable = false;
+
+        chart.mountainReplacementStarsA = null;
+        chart.mountainReplacementStarsB = null;
+        chart.mountainReplacementResult = null;
+
+        if (chart == null) {
+            return;
+        }
+
+        XuanKongReplacementCalculator.ReplacementResult result =
+                XuanKongReplacementCalculator.calculateReplacement(
+                        chart.mountainCenterStar,
+                        chart.sittingMountain
+                );
+
+        if (result == null || !result.hasReplacement) {
+            return;
+        }
+
+        if (result.replacementStar < 1
+                || result.replacementStar > 9) {
+            return;
+        }
+
+        chart.mountainReplacementResult = result;
+
+        chart.mountainReplacementStarsA =
+                flyFromCenter(
+                        result.replacementStar,
+                        result.methodAForward
+                );
+
+        chart.mountainReplacementStarsB =
+                flyFromCenter(
+                        result.replacementStar,
+                        result.methodBForward
+                );
+
+        chart.mountainReplacementAvailable =
+                isValidNineStarChart(
+                        chart.mountainReplacementStarsA)
+                && isValidNineStarChart(
+                        chart.mountainReplacementStarsB);
+    }
+
+    /**
+     * 计算朝向替卦候选盘。
+     *
+     * 方案A、方案B分别生成独立九宫数组。
+     */
+    private static void calculateFacingReplacementCharts(
+            ResidenceChart chart) {
+
+        chart.facingReplacementAvailable = false;
+
+        chart.facingReplacementStarsA = null;
+        chart.facingReplacementStarsB = null;
+        chart.facingReplacementResult = null;
+
+        if (chart == null) {
+            return;
+        }
+
+        XuanKongReplacementCalculator.ReplacementResult result =
+                XuanKongReplacementCalculator.calculateReplacement(
+                        chart.facingCenterStar,
+                        chart.facingMountain
+                );
+
+        if (result == null || !result.hasReplacement) {
+            return;
+        }
+
+        if (result.replacementStar < 1
+                || result.replacementStar > 9) {
+            return;
+        }
+
+        chart.facingReplacementResult = result;
+
+        chart.facingReplacementStarsA =
+                flyFromCenter(
+                        result.replacementStar,
+                        result.methodAForward
+                );
+
+        chart.facingReplacementStarsB =
+                flyFromCenter(
+                        result.replacementStar,
+                        result.methodBForward
+                );
+
+        chart.facingReplacementAvailable =
+                isValidNineStarChart(
+                        chart.facingReplacementStarsA)
+                && isValidNineStarChart(
+                        chart.facingReplacementStarsB);
+    }
+
+    /**
+     * 验证九宫数组是否包含完整的1至9九星。
+     */
+    public static boolean isValidNineStarChart(int[] stars) {
+
+        if (stars == null || stars.length != 9) {
+            return false;
+        }
+
+        boolean[] found = new boolean[10];
+
+        for (int star : stars) {
+
+            if (star < 1 || star > 9) {
+                return false;
+            }
+
+            if (found[star]) {
+                return false;
+            }
+
+            found[star] = true;
+        }
+
+        for (int i = 1; i <= 9; i++) {
+
+            if (!found[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static int getMountainIndex(String mountain) {
@@ -470,6 +693,7 @@ public class XuanKongCalculator {
         }
 
         for (int i = 0; i < MOUNTAINS.length; i++) {
+
             if (MOUNTAINS[i].equals(mountain.trim())) {
                 return i;
             }
@@ -501,21 +725,42 @@ public class XuanKongCalculator {
     private static int getStarOriginalPalace(int star) {
 
         switch (star) {
-            case 1: return 5;
-            case 2: return 6;
-            case 3: return 7;
-            case 4: return 8;
-            case 5: return 0;
-            case 6: return 1;
-            case 7: return 2;
-            case 8: return 3;
-            case 9: return 4;
-            default: return -1;
+
+            case 1:
+                return 5;
+
+            case 2:
+                return 6;
+
+            case 3:
+                return 7;
+
+            case 4:
+                return 8;
+
+            case 5:
+                return 0;
+
+            case 6:
+                return 1;
+
+            case 7:
+                return 2;
+
+            case 8:
+                return 3;
+
+            case 9:
+                return 4;
+
+            default:
+                return -1;
         }
     }
 
     private static boolean getStarFlyingDirection(
-            int star, String originalMountain) {
+            int star,
+            String originalMountain) {
 
         int originalIndex =
                 getMountainIndex(originalMountain);
@@ -558,7 +803,8 @@ public class XuanKongCalculator {
     }
 
     private static int getDragonIndex(
-            int palace, String mountain) {
+            int palace,
+            String mountain) {
 
         if (palace < 1 || palace > 8) {
             return -1;
