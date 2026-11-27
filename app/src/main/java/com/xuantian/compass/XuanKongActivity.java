@@ -487,373 +487,50 @@ public class XuanKongActivity extends BaseActivity {
         showResidenceCharts(chart);
     }
 
+    // 住宅三盘展示
     private void showResidenceCharts(
-        // 三盘合参：综合九宫格
-private GridLayout createCombinedNinePalaceGrid(
-        XuanKongCalculator.ResidenceChart chart) {
-
-    GridLayout grid = new GridLayout(this);
-    grid.setColumnCount(3);
-    grid.setRowCount(3);
-
-    int[][] order = {
-            {1, 5, 3},
-            {2, 0, 7},
-            {6, 4, 8}
-    };
-
-    for (int row = 0; row < 3; row++) {
-
-        for (int col = 0; col < 3; col++) {
-
-            int index = order[row][col];
-
-            int periodStar = getChartStar(
-                    chart.periodStars, index);
-
-            int mountainStar = getChartStar(
-                    chart.mountainStars, index);
-
-            int facingStar = getChartStar(
-                    chart.facingStars, index);
-
-            LinearLayout cell = createCombinedPalaceCell(
-                    index,
-                    periodStar,
-                    mountainStar,
-                    facingStar
-            );
-
-            GridLayout.LayoutParams params =
-                    new GridLayout.LayoutParams(
-                            GridLayout.spec(row),
-                            GridLayout.spec(col)
-                    );
-
-            params.width = 0;
-            params.height = dp(142);
-            params.columnSpec =
-                    GridLayout.spec(col, 1f);
-
-            params.setMargins(
-                    dp(2), dp(2), dp(2), dp(2));
-
-            grid.addView(cell, params);
-        }
-    }
-
-    return grid;
-}
-
-
-// 安全读取九宫星号
-private int getChartStar(int[] stars, int index) {
-
-    if (stars == null
-            || index < 0
-            || index >= stars.length) {
-
-        return 0;
-    }
-
-    return stars[index];
-}
-
-
-// 创建三盘合参的单宫
-private LinearLayout createCombinedPalaceCell(
-        int index,
-        int periodStar,
-        int mountainStar,
-        int facingStar) {
-
-    String[] palaceNames = {
-            "中宫", "乾宫", "兑宫",
-            "艮宫", "离宫", "坎宫",
-            "坤宫", "震宫", "巽宫"
-    };
-
-    LinearLayout cell = new LinearLayout(this);
-
-    cell.setOrientation(LinearLayout.VERTICAL);
-    cell.setGravity(Gravity.CENTER);
-    cell.setPadding(
-            dp(3), dp(5), dp(3), dp(5));
-
-    cell.setBackgroundColor(CELL_BG);
-
-    TextView palace = new TextView(this);
-    palace.setText(palaceNames[index]);
-    palace.setTextColor(WHITE);
-    palace.setTextSize(13);
-    palace.setGravity(Gravity.CENTER);
-    palace.setTypeface(null, Typeface.BOLD);
-
-    cell.addView(palace);
-
-    addCombinedStarLine(
-            cell, "运", periodStar);
-
-    addCombinedStarLine(
-            cell, "山", mountainStar);
-
-    addCombinedStarLine(
-            cell, "向", facingStar);
-
-    String periodElement =
-            getChartElement(periodStar);
-
-    String mountainElement =
-            getChartElement(mountainStar);
-
-    String facingElement =
-            getChartElement(facingStar);
-
-    TextView elements = new TextView(this);
-
-    elements.setText(
-            "五行：" + periodElement
-                    + "/" + mountainElement
-                    + "/" + facingElement);
-
-    elements.setTextColor(GRAY);
-    elements.setTextSize(10);
-    elements.setGravity(Gravity.CENTER);
-
-    cell.addView(elements);
-
-    TextView relations = new TextView(this);
-
-    relations.setText(
-            "运山：" + getFiveElementRelation(
-                    periodElement, mountainElement)
-                    + "\n运向：" + getFiveElementRelation(
-                    periodElement, facingElement)
-                    + "\n山向：" + getFiveElementRelation(
-                    mountainElement, facingElement)
-    );
-
-    relations.setTextColor(WHITE);
-    relations.setTextSize(9);
-    relations.setGravity(Gravity.CENTER);
-    relations.setLineSpacing(dp(1), 1f);
-
-    cell.addView(relations);
-
-    return cell;
-}
-
-
-// 添加单颗星的信息
-private void addCombinedStarLine(
-        LinearLayout parent,
-        String label,
-        int star) {
-
-    TextView text = new TextView(this);
-
-    if (star <= 0 || star > 9) {
-
-        text.setText(label + "星：—");
-
-    } else {
-
-        text.setText(
-                label + star + " "
-                        + getStarName(star));
-    }
-
-    text.setTextColor(WHITE);
-    text.setTextSize(11);
-    text.setGravity(Gravity.CENTER);
-
-    parent.addView(text);
-}
-
-
-// 获取九星五行
-private String getChartElement(int star) {
-
-    if (star <= 0 || star > 9) {
-        return "未知";
-    }
-
-    return getElement(star);
-}
-
-
-// 两种五行之间的生克关系
-private String getFiveElementRelation(
-        String first,
-        String second) {
-
-    if (first == null || second == null
-            || first.equals("未知")
-            || second.equals("未知")) {
-
-        return "未知";
-    }
-
-    if (first.equals(second)) {
-        return "比和";
-    }
-
-    // 五行相生
-    if (isGenerating(first, second)) {
-        return "生";
-    }
-
-    if (isGenerating(second, first)) {
-        return "受生";
-    }
-
-    // 五行相克
-    if (isRestraining(first, second)) {
-        return "克";
-    }
-
-    if (isRestraining(second, first)) {
-        return "受克";
-    }
-
-    return "未知";
-}
-
-
-// first 是否生 second
-private boolean isGenerating(
-        String first,
-        String second) {
-
-    return
-            ("水".equals(first) && "木".equals(second))
-            || ("木".equals(first) && "火".equals(second))
-            || ("火".equals(first) && "土".equals(second))
-            || ("土".equals(first) && "金".equals(second))
-            || ("金".equals(first) && "水".equals(second));
-}
-
-
-// first 是否克 second
-private boolean isRestraining(
-        String first,
-        String second) {
-
-    return
-            ("水".equals(first) && "火".equals(second))
-            || ("火".equals(first) && "金".equals(second))
-            || ("金".equals(first) && "木".equals(second))
-            || ("木".equals(first) && "土".equals(second))
-            || ("土".equals(first) && "水".equals(second));
-}
-        XuanKongCalculator.ResidenceChart chart) {
-
-    chartContainer.removeAllViews();
-
-    addSectionTitle("一、三盘合参 · 九宫综合排盘");
-
-    TextView guide = new TextView(this);
-    guide.setText("每宫同时显示运星、山星、向星及五行关系");
-    guide.setTextColor(GRAY);
-    guide.setTextSize(12);
-    guide.setGravity(Gravity.CENTER);
-    guide.setPadding(0, dp(4), 0, dp(10));
-
-    chartContainer.addView(guide);
-
-    chartContainer.addView(
-            createCombinedNinePalaceGrid(chart)
-    );
-
-    addSectionTitle("二、运盘 · 中宫入运星");
-
-    chartContainer.addView(
-            createNinePalaceGrid(chart.periodStars)
-    );
-
-    addSectionTitle(
-            "三、山盘 · 坐山：" + chart.sittingMountain
-    );
-
-    chartContainer.addView(
-            createNinePalaceGrid(chart.mountainStars)
-    );
-
-    addSectionTitle(
-            "四、向盘 · 朝向：" + chart.facingMountain
-    );
-
-    chartContainer.addView(
-            createNinePalaceGrid(chart.facingStars)
-    );
-
-    addSectionTitle("五、八宅分析");
-
-    EightMansionsCalculator.Result eightResult =
-            EightMansionsCalculator.calculate(
-                    chart.sittingMountain);
-
-    TextView eightText = new TextView(this);
-
-    if (eightResult == null) {
-
-        eightText.setText(
-                "坐山资料无效，暂时无法进行八宅分析。");
-
-    } else {
-
-        eightText.setText(
-                EightMansionsCalculator.format(eightResult));
-    }
-
-    eightText.setTextColor(WHITE);
-    eightText.setTextSize(15);
-    eightText.setLineSpacing(dp(7), 1f);
-    eightText.setPadding(
-            dp(16), dp(14), dp(16), dp(14));
-
-    eightText.setBackgroundColor(CELL_BG);
-
-    chartContainer.addView(eightText,
-            new LinearLayout.LayoutParams(-1, -2));
-
-    TextView note = new TextView(this);
-
-    note.setText(
-            "说明：玄空三盘按当前选定的下卦法基础规则排盘，"
-            + "暂未处理兼向、替卦。\n"
-            + "五行关系用于传统术数参考，不代表现实结果的确定预测。\n"
-            + "八宅分析按住宅坐山所属宅卦计算，"
-            + "不涉及户主命卦。");
-
-    note.setTextColor(GRAY);
-    note.setTextSize(13);
-    note.setGravity(Gravity.CENTER);
-    note.setLineSpacing(dp(4), 1f);
-    note.setPadding(dp(8), dp(14), dp(8), dp(14));
-
-    chartContainer.addView(note);
-}
+            XuanKongCalculator.ResidenceChart chart) {
 
         chartContainer.removeAllViews();
 
-        addSectionTitle("一、运盘 · 中宫入运星");
+        addSectionTitle("一、三盘合参 · 九宫综合排盘");
+
+        TextView guide = new TextView(this);
+        guide.setText("每宫同时显示运星、山星、向星及五行关系");
+        guide.setTextColor(GRAY);
+        guide.setTextSize(12);
+        guide.setGravity(Gravity.CENTER);
+        guide.setPadding(0, dp(4), 0, dp(10));
+
+        chartContainer.addView(guide);
+
         chartContainer.addView(
-                createNinePalaceGrid(chart.periodStars));
+                createCombinedNinePalaceGrid(chart)
+        );
+
+        addSectionTitle("二、运盘 · 中宫入运星");
+
+        chartContainer.addView(
+                createNinePalaceGrid(chart.periodStars)
+        );
 
         addSectionTitle(
-                "二、山盘 · 坐山：" + chart.sittingMountain);
+                "三、山盘 · 坐山：" + chart.sittingMountain
+        );
 
         chartContainer.addView(
-                createNinePalaceGrid(chart.mountainStars));
+                createNinePalaceGrid(chart.mountainStars)
+        );
 
         addSectionTitle(
-                "三、向盘 · 朝向：" + chart.facingMountain);
+                "四、向盘 · 朝向：" + chart.facingMountain
+        );
 
         chartContainer.addView(
-                createNinePalaceGrid(chart.facingStars));
+                createNinePalaceGrid(chart.facingStars)
+        );
 
-        addSectionTitle("四、八宅分析");
+        addSectionTitle("五、八宅分析");
 
         EightMansionsCalculator.Result eightResult =
                 EightMansionsCalculator.calculate(
@@ -888,6 +565,7 @@ private boolean isRestraining(
         note.setText(
                 "说明：玄空三盘按当前选定的下卦法基础规则排盘，"
                 + "暂未处理兼向、替卦。\n"
+                + "五行关系用于传统术数参考，不代表现实结果的确定预测。\n"
                 + "八宅分析按住宅坐山所属宅卦计算，"
                 + "不涉及户主命卦。");
 
@@ -898,6 +576,250 @@ private boolean isRestraining(
         note.setPadding(dp(8), dp(14), dp(8), dp(14));
 
         chartContainer.addView(note);
+    }
+
+    // 创建三盘合参九宫格
+    private GridLayout createCombinedNinePalaceGrid(
+            XuanKongCalculator.ResidenceChart chart) {
+
+        GridLayout result = new GridLayout(this);
+
+        result.setColumnCount(3);
+        result.setRowCount(3);
+        result.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
+        result.setUseDefaultMargins(false);
+
+        LinearLayout.LayoutParams gridParams =
+                new LinearLayout.LayoutParams(-1, dp(426));
+
+        gridParams.setMargins(
+                dp(2), dp(2), dp(2), dp(10));
+
+        result.setLayoutParams(gridParams);
+
+        if (chart == null
+                || chart.periodStars == null
+                || chart.mountainStars == null
+                || chart.facingStars == null
+                || chart.periodStars.length != 9
+                || chart.mountainStars.length != 9
+                || chart.facingStars.length != 9) {
+
+            return result;
+        }
+
+        for (int row = 0; row < 3; row++) {
+
+            for (int col = 0; col < 3; col++) {
+
+                int index = PALACE_ORDER[row][col];
+
+                LinearLayout cell =
+                        createCombinedPalaceCell(
+                                index,
+                                chart.periodStars[index],
+                                chart.mountainStars[index],
+                                chart.facingStars[index]);
+
+                GridLayout.LayoutParams params =
+                        new GridLayout.LayoutParams();
+
+                params.width = 0;
+                params.height = dp(140);
+
+                params.columnSpec =
+                        GridLayout.spec(col, 1f);
+
+                params.rowSpec =
+                        GridLayout.spec(row);
+
+                params.setMargins(
+                        dp(2), dp(2), dp(2), dp(2));
+
+                result.addView(cell, params);
+            }
+        }
+
+        return result;
+    }
+
+    // 创建综合九宫格单宫
+    private LinearLayout createCombinedPalaceCell(
+            int index,
+            int periodStar,
+            int mountainStar,
+            int facingStar) {
+
+        LinearLayout cell = new LinearLayout(this);
+
+        cell.setOrientation(LinearLayout.VERTICAL);
+        cell.setGravity(Gravity.CENTER);
+        cell.setPadding(
+                dp(2), dp(3), dp(2), dp(3));
+
+        cell.setBackgroundColor(CELL_BG);
+
+        TextView palace = new TextView(this);
+
+        palace.setText(
+                XuanKongCalculator.getPalaceName(index));
+
+        palace.setTextColor(GOLD);
+        palace.setTextSize(12);
+        palace.setTypeface(null, Typeface.BOLD);
+        palace.setGravity(Gravity.CENTER);
+        palace.setSingleLine(true);
+
+        cell.addView(palace,
+                new LinearLayout.LayoutParams(-1, dp(20)));
+
+        addCombinedStarLine(cell, "运", periodStar);
+        addCombinedStarLine(cell, "山", mountainStar);
+        addCombinedStarLine(cell, "向", facingStar);
+
+        String periodElement =
+                getChartElement(periodStar);
+
+        String mountainElement =
+                getChartElement(mountainStar);
+
+        String facingElement =
+                getChartElement(facingStar);
+
+        TextView elements = new TextView(this);
+
+        elements.setText(
+                "五行：" + periodElement
+                + "/" + mountainElement
+                + "/" + facingElement);
+
+        elements.setTextColor(GRAY);
+        elements.setTextSize(10);
+        elements.setGravity(Gravity.CENTER);
+        elements.setSingleLine(true);
+
+        cell.addView(elements,
+                new LinearLayout.LayoutParams(-1, dp(20)));
+
+        TextView relations = new TextView(this);
+
+        relations.setText(
+                "运山：" + getFiveElementRelation(
+                        periodElement, mountainElement)
+                + "\n运向：" + getFiveElementRelation(
+                        periodElement, facingElement)
+                + "\n山向：" + getFiveElementRelation(
+                        mountainElement, facingElement)
+        );
+
+        relations.setTextColor(WHITE);
+        relations.setTextSize(9);
+        relations.setGravity(Gravity.CENTER);
+        relations.setLineSpacing(dp(1), 1f);
+
+        cell.addView(relations,
+                new LinearLayout.LayoutParams(-1, -2));
+
+        return cell;
+    }
+
+    // 添加综合排盘中的单颗星
+    private void addCombinedStarLine(
+            LinearLayout parent,
+            String label,
+            int star) {
+
+        TextView text = new TextView(this);
+
+        if (star <= 0 || star > 9) {
+
+            text.setText(label + "星：—");
+
+        } else {
+
+            text.setText(
+                    label + star + " "
+                    + XuanKongCalculator.getStarName(star));
+        }
+
+        text.setTextColor(WHITE);
+        text.setTextSize(10);
+        text.setGravity(Gravity.CENTER);
+        text.setSingleLine(true);
+
+        parent.addView(text,
+                new LinearLayout.LayoutParams(-1, dp(19)));
+    }
+
+    // 获取九星五行
+    private String getChartElement(int star) {
+
+        if (star <= 0 || star > 9) {
+            return "未知";
+        }
+
+        return XuanKongCalculator.getElement(star);
+    }
+
+    // 两种五行之间的生克关系
+    private String getFiveElementRelation(
+            String first,
+            String second) {
+
+        if (first == null || second == null
+                || first.equals("未知")
+                || second.equals("未知")) {
+
+            return "未知";
+        }
+
+        if (first.equals(second)) {
+            return "比和";
+        }
+
+        if (isGenerating(first, second)) {
+            return "生";
+        }
+
+        if (isGenerating(second, first)) {
+            return "受生";
+        }
+
+        if (isRestraining(first, second)) {
+            return "克";
+        }
+
+        if (isRestraining(second, first)) {
+            return "受克";
+        }
+
+        return "未知";
+    }
+
+    // first 是否生 second
+    private boolean isGenerating(
+            String first,
+            String second) {
+
+        return
+                ("水".equals(first) && "木".equals(second))
+                || ("木".equals(first) && "火".equals(second))
+                || ("火".equals(first) && "土".equals(second))
+                || ("土".equals(first) && "金".equals(second))
+                || ("金".equals(first) && "水".equals(second));
+    }
+
+    // first 是否克 second
+    private boolean isRestraining(
+            String first,
+            String second) {
+
+        return
+                ("水".equals(first) && "火".equals(second))
+                || ("火".equals(first) && "金".equals(second))
+                || ("金".equals(first) && "木".equals(second))
+                || ("木".equals(first) && "土".equals(second))
+                || ("土".equals(first) && "水".equals(second));
     }
 
     private void addSectionTitle(String text) {
