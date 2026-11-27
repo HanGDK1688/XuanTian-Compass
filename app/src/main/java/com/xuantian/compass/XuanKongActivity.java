@@ -530,7 +530,12 @@ public class XuanKongActivity extends BaseActivity {
                 createNinePalaceGrid(chart.facingStars)
         );
 
-        addSectionTitle("五、八宅分析");
+        // 新增：坐山、朝向角度及替卦分析
+        addSectionTitle("五、兼向与替卦分析");
+
+        addReplacementAnalysis(chart);
+
+        addSectionTitle("六、八宅分析");
 
         EightMansionsCalculator.Result eightResult =
                 EightMansionsCalculator.calculate(
@@ -563,8 +568,9 @@ public class XuanKongActivity extends BaseActivity {
         TextView note = new TextView(this);
 
         note.setText(
-                "说明：玄空三盘按当前选定的下卦法基础规则排盘，"
-                + "暂未处理兼向、替卦。\n"
+                "说明：玄空三盘当前显示基础下卦法排盘。"
+                + "本页新增兼向与替卦计算分析，但尚未用替卦结果重新生成九宫飞星盘。\n"
+                + "替卦顺逆同时列出方案A、方案B，供后续核对不同规则。\n"
                 + "五行关系用于传统术数参考，不代表现实结果的确定预测。\n"
                 + "八宅分析按住宅坐山所属宅卦计算，"
                 + "不涉及户主命卦。");
@@ -576,6 +582,303 @@ public class XuanKongActivity extends BaseActivity {
         note.setPadding(dp(8), dp(14), dp(8), dp(14));
 
         chartContainer.addView(note);
+    }
+
+    /**
+     * 新增住宅兼向与替卦分析。
+     *
+     * 山盘使用山盘中宫星和坐山。
+     * 向盘使用向盘中宫星和朝向。
+     */
+    private void addReplacementAnalysis(
+            XuanKongCalculator.ResidenceChart chart) {
+
+        if (chart == null) {
+            addAnalysisText("住宅排盘数据无效，无法进行替卦分析。");
+            return;
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        result.append("【坐山分析】\n");
+
+        appendReplacementAnalysis(
+                result,
+                "坐山",
+                sittingAngle,
+                sittingMountain,
+                chart.mountainCenterStar
+        );
+
+        result.append("\n");
+        result.append("【朝向分析】\n");
+
+        appendReplacementAnalysis(
+                result,
+                "朝向",
+                facingAngle,
+                facingMountain,
+                chart.facingCenterStar
+        );
+
+        result.append("\n");
+        result.append("【计算说明】\n");
+        result.append("坐山替卦使用山盘中宫入星；");
+        result.append("朝向替卦使用向盘中宫入星。\n");
+        result.append("替卦山按原山三元龙，在原运星所在宫寻找同元龙对应山，再查当前项目替星表。\n");
+        result.append("方案A、方案B分别按原运星原宫及替星原宫的同元龙阴阳判断顺逆。\n");
+        result.append("两种方案并列显示，不擅自认定其中一种为唯一正确规则。");
+
+        addAnalysisText(result.toString());
+    }
+
+    /**
+     * 生成单个坐山或朝向的替卦分析。
+     */
+    private void appendReplacementAnalysis(
+            StringBuilder result,
+            String label,
+            double angle,
+            String savedMountain,
+            int originalStar) {
+
+        result.append(label).append("：")
+                .append(savedMountain)
+                .append("\n");
+
+        if (angle < 0
+                || Double.isNaN(angle)
+                || Double.isInfinite(angle)) {
+
+            result.append("测量角度：未设置\n");
+            result.append("无法判断下卦或替卦范围。\n");
+
+            return;
+        }
+
+        XuanKongReplacementCalculator.AngleResult angleResult =
+                XuanKongReplacementCalculator.analyzeBearing(
+                        angle);
+
+        if (angleResult == null) {
+            result.append("角度分析失败。\n");
+            return;
+        }
+
+        result.append("测量角度：")
+                .append(formatAngle(angle))
+                .append("°\n");
+
+        result.append("中心角度：")
+                .append(formatAngle(angleResult.centerAngle))
+                .append("°\n");
+
+        result.append("偏离中心：")
+                .append(formatSignedAngle(angleResult.deviation))
+                .append("°\n");
+
+        result.append("角度判定：")
+                .append(angleResult.classification)
+                .append("\n");
+
+        result.append("兼向方向：")
+                .append(angleResult.direction)
+                .append("\n");
+
+        if (!savedMountain.equals(angleResult.mountain)) {
+
+            result.append("⚠ 注意：角度计算所属山为")
+                    .append(angleResult.mountain)
+                    .append("，但住宅资料保存的是")
+                    .append(savedMountain)
+                    .append("。\n");
+
+            result.append("请检查住宅坐向资料，暂不进行替卦计算。\n");
+
+            return;
+        }
+
+        result.append("所属山向核对：一致\n");
+
+        if (angleResult.isBoundary) {
+
+            result.append("当前角度处于边界区域，");
+            result.append("需要人工复核，暂不计算替卦。\n");
+
+            return;
+        }
+
+        if (angleResult.isDownGua) {
+
+            result.append("当前角度属于下卦范围，");
+            result.append("本次不启动替卦计算。\n");
+
+            return;
+        }
+
+        if (!angleResult.isReplacementGua) {
+
+            result.append("当前角度不属于已定义的替卦范围。\n");
+
+            return;
+        }
+
+        result.append("\n");
+        result.append("原运星：")
+                .append(originalStar)
+                .append(" · ")
+                .append(XuanKongCalculator.getStarName(originalStar))
+                .append("\n");
+
+        XuanKongReplacementCalculator.ReplacementResult replacement =
+                XuanKongReplacementCalculator.calculateReplacement(
+                        originalStar,
+                        savedMountain);
+
+        if (replacement == null) {
+
+            result.append("替卦计算失败，请检查原运星及坐向资料。\n");
+
+            return;
+        }
+
+        result.append("原运星所在宫：")
+                .append(getPalaceNameByIndex(
+                        replacement.originalPalace))
+                .append("\n");
+
+        result.append("三元龙：")
+                .append(getDragonNameByIndex(
+                        replacement.dragonIndex))
+                .append("\n");
+
+        result.append("对应替卦山：")
+                .append(replacement.replacementMountain)
+                .append("\n");
+
+        result.append("替星：")
+                .append(replacement.replacementStar)
+                .append(" · ")
+                .append(XuanKongCalculator.getStarName(
+                        replacement.replacementStar))
+                .append("\n");
+
+        result.append("替星原宫：")
+                .append(getPalaceNameByIndex(
+                        replacement.replacementPalace))
+                .append("\n");
+
+        result.append("方案A：")
+                .append(replacement.methodA)
+                .append("\n");
+
+        result.append("方案B：")
+                .append(replacement.methodB)
+                .append("\n");
+
+        result.append("A、B结果：")
+                .append(replacement.methodAForward
+                        == replacement.methodBForward
+                        ? "一致" : "不同，需要核对规则")
+                .append("\n");
+
+        result.append("替卦对应关系：")
+                .append(replacement.hasReplacement
+                        ? "计算成功"
+                        : "未找到有效替卦对应关系")
+                .append("\n");
+    }
+
+    /**
+     * 添加替卦分析文字卡片。
+     */
+    private void addAnalysisText(String message) {
+
+        TextView text = new TextView(this);
+
+        text.setText(message);
+        text.setTextColor(WHITE);
+        text.setTextSize(14);
+        text.setLineSpacing(dp(5), 1f);
+
+        text.setPadding(
+                dp(15), dp(14), dp(15), dp(14));
+
+        text.setBackgroundColor(CELL_BG);
+
+        chartContainer.addView(
+                text,
+                new LinearLayout.LayoutParams(-1, -2)
+        );
+    }
+
+    /**
+     * 获取九宫名称。
+     */
+    private String getPalaceNameByIndex(int palace) {
+
+        switch (palace) {
+
+            case 1:
+                return "乾宫";
+
+            case 2:
+                return "兑宫";
+
+            case 3:
+                return "艮宫";
+
+            case 4:
+                return "离宫";
+
+            case 5:
+                return "坎宫";
+
+            case 6:
+                return "坤宫";
+
+            case 7:
+                return "震宫";
+
+            case 8:
+                return "巽宫";
+
+            default:
+                return "未知宫位";
+        }
+    }
+
+    /**
+     * 获取三元龙名称。
+     */
+    private String getDragonNameByIndex(int index) {
+
+        switch (index) {
+
+            case 0:
+                return "地元龙";
+
+            case 1:
+                return "天元龙";
+
+            case 2:
+                return "人元龙";
+
+            default:
+                return "未知";
+        }
+    }
+
+    /**
+     * 格式化带正负号的角度。
+     */
+    private String formatSignedAngle(double angle) {
+
+        return String.format(
+                Locale.CHINA,
+                "%+.2f",
+                angle
+        );
     }
 
     // 创建三盘合参九宫格
