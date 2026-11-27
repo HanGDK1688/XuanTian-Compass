@@ -4,10 +4,14 @@ package com.xuantian.compass;
  * 中州派替卦规则
  *
  * 独立于原有二十四山替星表。
- * 正式方法采用 A：
+ *
+ * 正式方法：A
  * 按原运星所在宫位的同元龙阴阳决定顺逆。
  *
- * B 方法仅作为比较参考。
+ * 比较方法：B
+ * 按替星原始宫位的同元龙阴阳决定顺逆。
+ *
+ * 阳顺飞，阴逆飞。
  */
 public final class ZhongzhouReplacementRules {
 
@@ -87,7 +91,9 @@ public final class ZhongzhouReplacementRules {
      * false = 阴
      *
      * 顺序：
-     * 地元龙、天元龙、人元龙
+     * 0：地元龙
+     * 1：天元龙
+     * 2：人元龙
      */
     private static final boolean[][] PALACE_YIN_YANG = {
             {},
@@ -142,6 +148,10 @@ public final class ZhongzhouReplacementRules {
 
     /**
      * 获取山所在宫位。
+     *
+     * 返回：
+     * 1乾、2兑、3艮、4离、
+     * 5坎、6坤、7震、8巽。
      */
     public static int getMountainPalace(String mountain) {
 
@@ -152,6 +162,7 @@ public final class ZhongzhouReplacementRules {
         String value = mountain.trim();
 
         for (int palace = 1; palace <= 8; palace++) {
+
             for (int i = 0; i < 3; i++) {
 
                 if (PALACE_MOUNTAINS[palace][i].equals(value)) {
@@ -172,16 +183,21 @@ public final class ZhongzhouReplacementRules {
      */
     public static int getDragonIndex(String mountain) {
 
+        if (mountain == null) {
+            return -1;
+        }
+
         int palace = getMountainPalace(mountain);
 
         if (palace < 1) {
             return -1;
         }
 
+        String value = mountain.trim();
+
         for (int i = 0; i < 3; i++) {
 
-            if (PALACE_MOUNTAINS[palace][i]
-                    .equals(mountain.trim())) {
+            if (PALACE_MOUNTAINS[palace][i].equals(value)) {
                 return i;
             }
         }
@@ -210,42 +226,60 @@ public final class ZhongzhouReplacementRules {
      * 洛书九宫：
      * 1坎、2坤、3震、4巽、5中、
      * 6乾、7兑、8艮、9离。
+     *
+     * 返回值采用本类宫位编号：
+     * 1乾、2兑、3艮、4离、
+     * 5坎、6坤、7震、8巽。
+     *
+     * 五黄入中返回0。
      */
     private static int getStarOriginalPalace(int star) {
 
         switch (star) {
+
             case 1:
                 return 5;
+
             case 2:
                 return 6;
+
             case 3:
                 return 7;
+
             case 4:
                 return 8;
+
             case 5:
                 return 0;
+
             case 6:
                 return 1;
+
             case 7:
                 return 2;
+
             case 8:
                 return 3;
+
             case 9:
                 return 4;
+
             default:
                 return -1;
         }
     }
 
     /**
-     * 在指定宫位中，寻找相同元龙的山。
+     * 在指定宫位中寻找相同元龙的山。
      */
     private static String getMountainByDragon(
             int palace,
             int dragonIndex) {
 
         if (palace < 1 || palace > 8
-                || dragonIndex < 0 || dragonIndex > 2) {
+                || dragonIndex < 0
+                || dragonIndex > 2) {
+
             return null;
         }
 
@@ -258,6 +292,7 @@ public final class ZhongzhouReplacementRules {
      * 阳顺飞，阴逆飞。
      */
     private static String getDirectionText(boolean forward) {
+
         return forward ? "阳顺飞" : "阴逆飞";
     }
 
@@ -265,8 +300,8 @@ public final class ZhongzhouReplacementRules {
      * 判断实际坐山与兼山的关系。
      *
      * replacementAngle：
-     * true  = 已进入兼向判断角度范围
-     * false = 下卦角度范围
+     * true：进入兼向判断角度范围。
+     * false：处于下卦角度范围。
      *
      * 进入兼向范围不代表一定需要替卦。
      */
@@ -277,27 +312,32 @@ public final class ZhongzhouReplacementRules {
 
         Result result = new Result();
 
-        result.originalMountain = originalMountain;
-        result.adjacentMountain = adjacentMountain;
-
         if (originalMountain == null
                 || adjacentMountain == null) {
 
             result.status = Status.INVALID_INPUT;
             result.description = "山向数据为空";
+
             return result;
         }
 
+        String original = originalMountain.trim();
+        String adjacent = adjacentMountain.trim();
+
+        result.originalMountain = original;
+        result.adjacentMountain = adjacent;
+
         int originalPalace =
-                getMountainPalace(originalMountain);
+                getMountainPalace(original);
 
         int adjacentPalace =
-                getMountainPalace(adjacentMountain);
+                getMountainPalace(adjacent);
 
         if (originalPalace < 1 || adjacentPalace < 1) {
 
             result.status = Status.INVALID_INPUT;
             result.description = "无法识别山向";
+
             return result;
         }
 
@@ -305,46 +345,73 @@ public final class ZhongzhouReplacementRules {
         result.adjacentPalace = adjacentPalace;
 
         result.dragonIndex =
-                getDragonIndex(originalMountain);
+                getDragonIndex(original);
 
-        result.originalYang =
-                isYang(originalMountain);
+        if (result.dragonIndex < 0) {
 
-        result.adjacentYang =
-                isYang(adjacentMountain);
+            result.status = Status.INVALID_INPUT;
+            result.description = "无法识别原山元龙";
 
+            return result;
+        }
+
+        result.originalYang = isYang(original);
+        result.adjacentYang = isYang(adjacent);
+
+        /*
+         * 下卦不进入替卦计算。
+         */
         if (!replacementAngle) {
 
             result.status = Status.DOWN_GUA;
             result.description = "处于下卦角度范围";
+
             return result;
         }
 
+        /*
+         * 不同卦宫属于出卦。
+         *
+         * 必须终止普通替卦计算。
+         */
         if (originalPalace != adjacentPalace) {
 
             result.status = Status.OUT_OF_PALACE;
-            result.needsReplacement = true;
-            result.description = "不同卦宫，属于出卦兼向";
+            result.needsReplacement = false;
+            result.hasReplacement = false;
+
+            result.description =
+                    "不同卦宫，属于出卦兼向；不生成普通替卦盘";
 
             return result;
         }
 
+        /*
+         * 同宫同阴阳，不替。
+         */
         if (result.originalYang == result.adjacentYang) {
 
             result.status =
                     Status.SAME_PALACE_SAME_YINYANG;
+
+            result.needsReplacement = false;
+            result.hasReplacement = false;
 
             result.description = "同宫同阴阳，不替";
 
             return result;
         }
 
+        /*
+         * 同宫异阴阳，进入替卦判断。
+         */
         result.status =
                 Status.SAME_PALACE_DIFFERENT_YINYANG;
 
         result.needsReplacement = true;
 
-        result.description = "同宫阴阳不同，进入替卦判断";
+        result.description =
+                "同宫阴阳不同，进入替卦判断";
 
         return result;
     }
@@ -376,17 +443,17 @@ public final class ZhongzhouReplacementRules {
                 replacementAngle
         );
 
-        if (result.status == Status.INVALID_INPUT
-                || result.status == Status.DOWN_GUA
-                || result.status == Status.SAME_PALACE_SAME_YINYANG) {
-
-            return result;
-        }
-
+        /*
+         * 原运星必须为一白至九紫。
+         */
         if (originalStar < 1 || originalStar > 9) {
 
             result.status = Status.INVALID_INPUT;
-            result.description = "原运星必须在一白至九紫之间";
+            result.hasReplacement = false;
+            result.replacementStar = -1;
+
+            result.description =
+                    "原运星必须在一白至九紫之间";
 
             return result;
         }
@@ -394,7 +461,23 @@ public final class ZhongzhouReplacementRules {
         result.originalStar = originalStar;
 
         /*
+         * 下卦、无效输入、同宫同阴阳、出卦：
+         * 均不得继续生成普通替卦盘。
+         */
+        if (result.status == Status.INVALID_INPUT
+                || result.status == Status.DOWN_GUA
+                || result.status == Status.SAME_PALACE_SAME_YINYANG
+                || result.status == Status.OUT_OF_PALACE) {
+
+            result.hasReplacement = false;
+            result.replacementStar = -1;
+
+            return result;
+        }
+
+        /*
          * 五黄特殊处理：
+         *
          * 不生成普通替星。
          * 顺逆依据原山元龙阴阳。
          */
@@ -405,6 +488,7 @@ public final class ZhongzhouReplacementRules {
             result.hasReplacement = false;
             result.replacementStar = -1;
             result.replacementMountain = null;
+            result.replacementPalace = -1;
 
             result.methodAForward = result.originalYang;
             result.methodBForward = result.originalYang;
@@ -430,7 +514,10 @@ public final class ZhongzhouReplacementRules {
         if (starPalace < 1 || starPalace > 8) {
 
             result.status = Status.INVALID_INPUT;
-            result.description = "无法确定原运星宫位";
+            result.hasReplacement = false;
+
+            result.description =
+                    "无法确定原运星宫位";
 
             return result;
         }
@@ -448,13 +535,19 @@ public final class ZhongzhouReplacementRules {
         if (replacementMountain == null) {
 
             result.status = Status.INVALID_INPUT;
-            result.description = "无法找到对应元龙替卦山";
+            result.hasReplacement = false;
+
+            result.description =
+                    "无法找到对应元龙替卦山";
 
             return result;
         }
 
-        result.replacementMountain = replacementMountain;
-        result.replacementPalace = starPalace;
+        result.replacementMountain =
+                replacementMountain;
+
+        result.replacementPalace =
+                starPalace;
 
         /*
          * 根据中州派十三山表取替星。
@@ -471,11 +564,14 @@ public final class ZhongzhouReplacementRules {
             result.hasReplacement = false;
 
             result.description =
-                    "对应替卦山不在中州派十三山替星表内";
+                    "对应替卦山不在中州派十三山替星表内；不生成普通替卦盘";
 
             return result;
         }
 
+        /*
+         * 找到有效替星。
+         */
         result.hasReplacement = true;
 
         /*
@@ -485,13 +581,14 @@ public final class ZhongzhouReplacementRules {
          * 阳顺，阴逆。
          */
         result.methodAForward =
-                PALACE_YIN_YANG[starPalace][result.dragonIndex];
+                PALACE_YIN_YANG[starPalace]
+                        [result.dragonIndex];
 
         /*
          * 方法 B：
-         * 依据替星自身原始宫位中相同元龙的阴阳决定顺逆。
+         * 依据替星原始宫位中相同元龙的阴阳决定顺逆。
          *
-         * 仅作为比较方法，不作为当前正式中州派方法。
+         * 仅供比较，不作为正式方法。
          */
         int replacementStarPalace =
                 getStarOriginalPalace(replacementStar);
@@ -501,7 +598,10 @@ public final class ZhongzhouReplacementRules {
 
             result.status = Status.INVALID_INPUT;
             result.hasReplacement = false;
-            result.description = "无法确定替星原始宫位";
+            result.replacementStar = -1;
+
+            result.description =
+                    "无法确定替星原始宫位";
 
             return result;
         }
@@ -516,8 +616,11 @@ public final class ZhongzhouReplacementRules {
         result.methodB =
                 getDirectionText(result.methodBForward);
 
+        result.status =
+                Status.SAME_PALACE_DIFFERENT_YINYANG;
+
         result.description =
-                "中州派替卦计算完成；方法A为正式计算方向，方法B仅供比较";
+                "中州派替卦计算完成；方法A为正式结果，方法B仅供比较";
 
         return result;
     }
@@ -526,6 +629,7 @@ public final class ZhongzhouReplacementRules {
      * 判断某山是否属于中州派十三山。
      */
     public static boolean hasReplacementStar(String mountain) {
+
         return getReplacementStar(mountain) >= 1;
     }
 }
