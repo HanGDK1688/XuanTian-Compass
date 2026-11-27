@@ -33,6 +33,10 @@ public class XuanKongActivity extends BaseActivity {
     private double facingAngle = -1;
     private double sittingAngle = -1;
 
+    // V1.6：默认采用沈氏规则
+    private ResidenceReplacementEngine.Rule replacementRule =
+            ResidenceReplacementEngine.Rule.SHEN;
+
     private LinearLayout root;
     private LinearLayout chartContainer;
 
@@ -40,6 +44,9 @@ public class XuanKongActivity extends BaseActivity {
     private TextView infoText;
     private TextView centerText;
     private GridLayout grid;
+
+    private Button shenRuleButton;
+    private Button zhongzhouRuleButton;
 
     private final int BG = Color.rgb(20, 17, 14);
     private final int GOLD = Color.rgb(220, 180, 105);
@@ -231,6 +238,11 @@ public class XuanKongActivity extends BaseActivity {
         root.addView(centerText,
                 new LinearLayout.LayoutParams(-1, dp(45)));
 
+        // V1.6：住宅模式增加流派选择
+        if (residenceMode) {
+            createReplacementRuleButtons();
+        }
+
         chartContainer = new LinearLayout(this);
         chartContainer.setOrientation(LinearLayout.VERTICAL);
 
@@ -268,6 +280,87 @@ public class XuanKongActivity extends BaseActivity {
                 new LinearLayout.LayoutParams(-1, dp(35)));
 
         setContentView(scroll);
+    }
+
+    /**
+     * V1.6：沈氏 / 中州规则切换。
+     */
+    private void createReplacementRuleButtons() {
+
+        TextView ruleTitle = new TextView(this);
+
+        ruleTitle.setText("替卦规则选择");
+        ruleTitle.setTextColor(GOLD);
+        ruleTitle.setTextSize(14);
+        ruleTitle.setGravity(Gravity.CENTER);
+
+        root.addView(ruleTitle,
+                new LinearLayout.LayoutParams(-1, dp(28)));
+
+        LinearLayout row = new LinearLayout(this);
+
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+
+        shenRuleButton = createButton("沈氏规则");
+
+        zhongzhouRuleButton = createButton("中州规则");
+
+        shenRuleButton.setOnClickListener(v -> {
+
+            if (!dataReady) return;
+
+            replacementRule =
+                    ResidenceReplacementEngine.Rule.SHEN;
+
+            updateRuleButtonState();
+            updateResidenceChart();
+        });
+
+        zhongzhouRuleButton.setOnClickListener(v -> {
+
+            if (!dataReady) return;
+
+            replacementRule =
+                    ResidenceReplacementEngine.Rule.ZHONGZHOU;
+
+            updateRuleButtonState();
+            updateResidenceChart();
+        });
+
+        row.addView(shenRuleButton,
+                new LinearLayout.LayoutParams(0, dp(48), 1f));
+
+        row.addView(zhongzhouRuleButton,
+                new LinearLayout.LayoutParams(0, dp(48), 1f));
+
+        root.addView(row,
+                new LinearLayout.LayoutParams(-1, dp(54)));
+
+        updateRuleButtonState();
+    }
+
+    /**
+     * 更新流派按钮状态。
+     */
+    private void updateRuleButtonState() {
+
+        if (shenRuleButton == null
+                || zhongzhouRuleButton == null) {
+            return;
+        }
+
+        if (replacementRule
+                == ResidenceReplacementEngine.Rule.SHEN) {
+
+            shenRuleButton.setText("✓ 沈氏规则");
+            zhongzhouRuleButton.setText("中州规则");
+
+        } else {
+
+            shenRuleButton.setText("沈氏规则");
+            zhongzhouRuleButton.setText("✓ 中州规则");
+        }
     }
 
     private void createYearAndModeButtons() {
@@ -451,6 +544,7 @@ public class XuanKongActivity extends BaseActivity {
             return;
         }
 
+        // 保留原有二参数接口，不改变基础宅盘算法
         XuanKongCalculator.ResidenceChart chart =
                 XuanKongCalculator.getResidenceChart(
                         currentYear,
@@ -482,6 +576,9 @@ public class XuanKongActivity extends BaseActivity {
                 + "\n朝向角度：" + formatAngle(facingAngle)
                 + "°    坐山角度：" + formatAngle(sittingAngle)
                 + "°"
+                + "\n当前替卦规则："
+                + ResidenceReplacementEngine.getRuleName(
+                        replacementRule)
         );
 
         showResidenceCharts(chart);
@@ -530,7 +627,11 @@ public class XuanKongActivity extends BaseActivity {
                 createNinePalaceGrid(chart.facingStars)
         );
 
-        addSectionTitle("五、兼向与替卦分析");
+        addSectionTitle(
+                "五、兼向与替卦分析 · "
+                + ResidenceReplacementEngine.getRuleName(
+                        replacementRule)
+        );
 
         addReplacementAnalysis(chart);
 
@@ -572,8 +673,10 @@ public class XuanKongActivity extends BaseActivity {
 
         note.setText(
                 "说明：基础三盘保留原下卦排盘；"
-                + "替卦候选盘另列方案A、方案B，供核对，不覆盖基础盘。\n"
-                + "候选盘只有在角度判定为替卦且档案山向一致时显示。\n"
+                + "替卦候选盘另列方案A、方案B，不覆盖基础盘。\n"
+                + "坐山与朝向分别判断，互不影响。\n"
+                + "档案原山向与角度识别山向分别传入所选流派规则。\n"
+                + "中州规则以方法A为正式结果，方法B作为对照。\n"
                 + "五行关系用于传统术数参考，不代表现实结果的确定预测。\n"
                 + "八宅分析按住宅坐山所属宅卦计算，"
                 + "不涉及户主命卦。");
@@ -588,7 +691,7 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * 替卦分析。
+     * V1.6：分别计算坐山、朝向的替卦分析。
      */
     private void addReplacementAnalysis(
             XuanKongCalculator.ResidenceChart chart) {
@@ -598,61 +701,56 @@ public class XuanKongActivity extends BaseActivity {
             return;
         }
 
-        StringBuilder result = new StringBuilder();
+        addAnalysisText(
+                "当前规则：" +
+                ResidenceReplacementEngine.getRuleName(
+                        replacementRule)
+                + "\n坐山和朝向分别计算，不共用替卦结果。");
 
-        result.append("【坐山分析】\n");
-
-        appendReplacementAnalysis(
-                result,
+        addOneReplacementAnalysis(
                 "坐山",
                 sittingAngle,
                 sittingMountain,
                 chart.mountainCenterStar
         );
 
-        result.append("\n");
-        result.append("【朝向分析】\n");
-
-        appendReplacementAnalysis(
-                result,
+        addOneReplacementAnalysis(
                 "朝向",
                 facingAngle,
                 facingMountain,
                 chart.facingCenterStar
         );
-
-        result.append("\n");
-        result.append("【计算说明】\n");
-        result.append("坐山替卦使用山盘中宫入星；");
-        result.append("朝向替卦使用向盘中宫入星。\n");
-        result.append("替卦山按原山三元龙，在原运星所在宫寻找同元龙对应山，再查当前项目替星表。\n");
-        result.append("方案A、方案B分别按原运星原宫及替星原宫的同元龙阴阳判断顺逆。\n");
-        result.append("两种方案并列显示，不擅自认定其中一种为唯一正确规则。");
-
-        addAnalysisText(result.toString());
     }
 
     /**
-     * 单个坐山或朝向的替卦分析。
+     * 单独分析坐山或朝向。
      */
-    private void appendReplacementAnalysis(
-            StringBuilder result,
+    private void addOneReplacementAnalysis(
             String label,
             double angle,
             String savedMountain,
             int originalStar) {
 
-        result.append(label).append("：")
+        StringBuilder result = new StringBuilder();
+
+        result.append("【").append(label).append("】\n");
+
+        result.append("档案原山向：")
                 .append(savedMountain)
                 .append("\n");
 
-        if (angle < 0
-                || Double.isNaN(angle)
-                || Double.isInfinite(angle)) {
+        result.append("原运星：")
+                .append(originalStar)
+                .append(" · ")
+                .append(XuanKongCalculator.getStarName(originalStar))
+                .append("\n");
+
+        if (!isValidAngle(angle)) {
 
             result.append("测量角度：未设置\n");
-            result.append("无法判断下卦或替卦范围。\n");
+            result.append("无法判断下卦或替卦范围。");
 
+            addAnalysisText(result.toString());
             return;
         }
 
@@ -661,7 +759,9 @@ public class XuanKongActivity extends BaseActivity {
                         angle);
 
         if (angleResult == null) {
-            result.append("角度分析失败。\n");
+
+            result.append("角度分析失败。");
+            addAnalysisText(result.toString());
             return;
         }
 
@@ -681,134 +781,231 @@ public class XuanKongActivity extends BaseActivity {
                 .append(angleResult.classification)
                 .append("\n");
 
+        result.append("实际识别山向：")
+                .append(angleResult.mountain)
+                .append("\n");
+
         result.append("兼向方向：")
                 .append(angleResult.direction)
                 .append("\n");
 
         if (angleResult.isBoundary) {
 
-            result.append("当前角度处于边界区域，");
-            result.append("需要人工复核，暂不计算替卦。\n");
+            result.append(
+                    "当前角度处于边界区域，需要人工复核，"
+                    + "暂不进行替卦计算。");
 
+            addAnalysisText(result.toString());
             return;
         }
-
-        if (!savedMountain.equals(angleResult.mountain)) {
-
-            result.append("⚠ 注意：角度计算所属山为")
-                    .append(angleResult.mountain)
-                    .append("，但住宅资料保存的是")
-                    .append(savedMountain)
-                    .append("。\n");
-
-            result.append("请检查住宅坐向资料，暂不进行替卦计算。\n");
-
-            return;
-        }
-
-        result.append("所属山向核对：一致\n");
 
         if (angleResult.isDownGua) {
 
-            result.append("当前角度属于下卦范围，");
-            result.append("本次不启动替卦计算。\n");
+            result.append(
+                    "当前角度属于下卦范围，不启动替卦计算。");
 
+            addAnalysisText(result.toString());
             return;
         }
 
         if (!angleResult.isReplacementGua) {
 
-            result.append("当前角度不属于已定义的替卦范围。\n");
+            result.append(
+                    "当前角度不属于已定义的替卦范围。");
 
+            addAnalysisText(result.toString());
             return;
         }
 
-        result.append("\n");
-        result.append("原运星：")
-                .append(originalStar)
-                .append(" · ")
-                .append(XuanKongCalculator.getStarName(originalStar))
-                .append("\n");
-
-        XuanKongReplacementCalculator.ReplacementResult replacement =
-                XuanKongReplacementCalculator.calculateReplacement(
+        /*
+         * 注意：
+         * savedMountain 是档案原山向。
+         * angleResult.mountain 是角度实际识别山向。
+         *
+         * 两者分别传入引擎，不再提前拦截。
+         */
+        ResidenceReplacementEngine.Result replacement =
+                ResidenceReplacementEngine.calculate(
+                        replacementRule,
                         originalStar,
-                        savedMountain);
+                        savedMountain,
+                        angleResult.mountain,
+                        true
+                );
 
-        if (replacement == null) {
+        appendEngineResult(
+                result,
+                replacement
+        );
 
-            result.append("替卦计算失败，请检查原运星及坐向资料。\n");
-
-            return;
-        }
-
-        result.append("原运星所在宫：")
-                .append(getPalaceNameByIndex(
-                        replacement.originalPalace))
-                .append("\n");
-
-        result.append("三元龙：")
-                .append(getDragonNameByIndex(
-                        replacement.dragonIndex))
-                .append("\n");
-
-        result.append("对应替卦山：")
-                .append(replacement.replacementMountain)
-                .append("\n");
-
-        result.append("替星：")
-                .append(replacement.replacementStar)
-                .append(" · ")
-                .append(XuanKongCalculator.getStarName(
-                        replacement.replacementStar))
-                .append("\n");
-
-        result.append("替星原宫：")
-                .append(getPalaceNameByIndex(
-                        replacement.replacementPalace))
-                .append("\n");
-
-        result.append("方案A：")
-                .append(replacement.methodA)
-                .append("\n");
-
-        result.append("方案B：")
-                .append(replacement.methodB)
-                .append("\n");
-
-        result.append("A、B结果：")
-                .append(replacement.methodAForward
-                        == replacement.methodBForward
-                        ? "一致" : "不同，需要核对规则")
-                .append("\n");
-
-        result.append("替卦对应关系：")
-                .append(replacement.hasReplacement
-                        ? "计算成功"
-                        : "未找到有效替卦对应关系")
-                .append("\n");
+        addAnalysisText(result.toString());
     }
 
     /**
-     * 显示坐山和朝向的替卦候选九宫盘。
-     *
-     * 两者分别判断，互不影响。
+     * 将引擎结果转换为界面文字。
+     */
+    private void appendEngineResult(
+            StringBuilder result,
+            ResidenceReplacementEngine.Result replacement) {
+
+        if (replacement == null) {
+
+            result.append("\n替卦引擎没有返回结果。");
+            return;
+        }
+
+        result.append("\n规则：")
+                .append(
+                        ResidenceReplacementEngine.getRuleName(
+                                replacement.rule))
+                .append("\n");
+
+        result.append("档案原山向：")
+                .append(replacement.originalMountain)
+                .append("\n");
+
+        result.append("实际相邻山向：")
+                .append(replacement.adjacentMountain)
+                .append("\n");
+
+        if (replacement.rule
+                == ResidenceReplacementEngine.Rule.SHEN) {
+
+            XuanKongReplacementCalculator.ReplacementResult shen =
+                    replacement.shenResult;
+
+            if (shen == null) {
+
+                result.append(replacement.description);
+                return;
+            }
+
+            result.append("沈氏规则结果：\n");
+
+            result.append("原运星所在宫：")
+                    .append(getPalaceNameByIndex(
+                            shen.originalPalace))
+                    .append("\n");
+
+            result.append("三元龙：")
+                    .append(getDragonNameByIndex(
+                            shen.dragonIndex))
+                    .append("\n");
+
+            result.append("替卦山：")
+                    .append(shen.replacementMountain)
+                    .append("\n");
+
+            result.append("替星：")
+                    .append(shen.replacementStar)
+                    .append(" · ")
+                    .append(XuanKongCalculator.getStarName(
+                            shen.replacementStar))
+                    .append("\n");
+
+            result.append("替星原宫：")
+                    .append(getPalaceNameByIndex(
+                            shen.replacementPalace))
+                    .append("\n");
+
+            result.append("方案A：")
+                    .append(shen.methodA)
+                    .append("\n");
+
+            result.append("方案B：")
+                    .append(shen.methodB)
+                    .append("\n");
+
+            result.append("说明：")
+                    .append(replacement.description);
+
+        } else {
+
+            ZhongzhouReplacementRules.Result zhongzhou =
+                    replacement.zhongzhouResult;
+
+            if (zhongzhou == null) {
+
+                result.append(replacement.description);
+                return;
+            }
+
+            result.append("中州规则状态：")
+                    .append(
+                            ResidenceReplacementEngine
+                                    .getZhongzhouStatusText(
+                                            zhongzhou.status))
+                    .append("\n");
+
+            result.append("原山元龙：")
+                    .append(getDragonNameByIndex(
+                            zhongzhou.dragonIndex))
+                    .append("\n");
+
+            result.append("原山宫位：")
+                    .append(getPalaceNameByIndex(
+                            zhongzhou.originalPalace))
+                    .append("\n");
+
+            result.append("实际山宫位：")
+                    .append(getPalaceNameByIndex(
+                            zhongzhou.adjacentPalace))
+                    .append("\n");
+
+            if (zhongzhou.replacementMountain != null) {
+
+                result.append("替卦山：")
+                        .append(zhongzhou.replacementMountain)
+                        .append("\n");
+            }
+
+            if (zhongzhou.replacementStar >= 1
+                    && zhongzhou.replacementStar <= 9) {
+
+                result.append("替星：")
+                        .append(zhongzhou.replacementStar)
+                        .append(" · ")
+                        .append(XuanKongCalculator.getStarName(
+                                zhongzhou.replacementStar))
+                        .append("\n");
+
+                result.append("替星原宫：")
+                        .append(getPalaceNameByIndex(
+                                zhongzhou.replacementPalace))
+                        .append("\n");
+            }
+
+            result.append("方法A：")
+                    .append(zhongzhou.methodA)
+                    .append("（正式方法）\n");
+
+            result.append("方法B：")
+                    .append(zhongzhou.methodB)
+                    .append("（对照方法）\n");
+
+            result.append("说明：")
+                    .append(replacement.description);
+        }
+    }
+
+    /**
+     * V1.6：替卦候选盘直接使用 ResidenceReplacementEngine。
      */
     private void showReplacementCandidateCharts(
             XuanKongCalculator.ResidenceChart chart) {
 
         if (chart == null) {
-            addAnalysisText("住宅排盘数据无效，无法显示替卦候选盘。");
+            addAnalysisText("住宅排盘数据无效，无法显示候选盘。");
             return;
         }
 
         TextView guide = new TextView(this);
 
         guide.setText(
-                "以下为替卦候选盘，不会覆盖上方基础三盘。\n"
-                + "只有角度属于替卦范围、档案山向一致，"
-                + "且候选盘数据有效时，才显示对应九宫盘。\n"
-                + "方案A、方案B分别展示，供进一步核对。");
+                "候选盘由当前选定流派独立计算。\n"
+                + "坐山和朝向分别展示。\n"
+                + "中州方法A为正式结果，方法B为对照结果。\n"
+                + "出卦、五黄特殊、无替星、下卦及边界状态不显示普通候选盘。");
 
         guide.setTextColor(GRAY);
         guide.setTextSize(12);
@@ -818,43 +1015,29 @@ public class XuanKongActivity extends BaseActivity {
 
         chartContainer.addView(guide);
 
-        // 坐山候选盘
         showOneReplacementCandidate(
                 "坐山",
                 sittingAngle,
                 sittingMountain,
-                chart.mountainCenterStar,
-                chart.mountainReplacementResult,
-                chart.mountainReplacementAvailable,
-                chart.mountainReplacementStarsA,
-                chart.mountainReplacementStarsB
+                chart.mountainCenterStar
         );
 
-        // 朝向候选盘
         showOneReplacementCandidate(
                 "朝向",
                 facingAngle,
                 facingMountain,
-                chart.facingCenterStar,
-                chart.facingReplacementResult,
-                chart.facingReplacementAvailable,
-                chart.facingReplacementStarsA,
-                chart.facingReplacementStarsB
+                chart.facingCenterStar
         );
     }
 
     /**
-     * 单独显示坐山或朝向的替卦候选盘。
+     * 单独展示坐山或朝向候选盘。
      */
     private void showOneReplacementCandidate(
             String label,
             double angle,
             String savedMountain,
-            int originalStar,
-            XuanKongReplacementCalculator.ReplacementResult replacement,
-            boolean available,
-            int[] starsA,
-            int[] starsB) {
+            int originalStar) {
 
         TextView title = new TextView(this);
 
@@ -867,9 +1050,7 @@ public class XuanKongActivity extends BaseActivity {
 
         chartContainer.addView(title);
 
-        if (angle < 0
-                || Double.isNaN(angle)
-                || Double.isInfinite(angle)) {
+        if (!isValidAngle(angle)) {
 
             addAnalysisText(
                     label + "角度尚未设置，暂不显示替卦候选盘。");
@@ -892,22 +1073,8 @@ public class XuanKongActivity extends BaseActivity {
         if (angleResult.isBoundary) {
 
             addAnalysisText(
-                    label + "当前角度为边界区域，"
-                    + "需要人工复核，暂不显示替卦候选盘。");
-
-            return;
-        }
-
-        if (savedMountain == null
-                || savedMountain.trim().isEmpty()
-                || !savedMountain.equals(angleResult.mountain)) {
-
-            addAnalysisText(
-                    label + "角度识别为"
-                    + angleResult.mountain
-                    + "，住宅档案保存为"
-                    + savedMountain
-                    + "，山向不一致，暂不显示候选盘。");
+                    label + "当前角度处于边界区域，"
+                    + "需要人工复核，暂不显示候选盘。");
 
             return;
         }
@@ -915,8 +1082,7 @@ public class XuanKongActivity extends BaseActivity {
         if (angleResult.isDownGua) {
 
             addAnalysisText(
-                    label + "当前角度为下卦范围，"
-                    + "不需要显示替卦候选盘。");
+                    label + "当前角度属于下卦范围，不需要替卦候选盘。");
 
             return;
         }
@@ -930,31 +1096,107 @@ public class XuanKongActivity extends BaseActivity {
             return;
         }
 
-        if (!available
-                || replacement == null
-                || !replacement.hasReplacement) {
+        /*
+         * 不再要求档案山向必须等于角度识别山向。
+         * 两者作为独立参数进入规则引擎。
+         */
+        ResidenceReplacementEngine.Result replacement =
+                ResidenceReplacementEngine.calculate(
+                        replacementRule,
+                        originalStar,
+                        savedMountain,
+                        angleResult.mountain,
+                        true
+                );
+
+        if (replacement == null) {
 
             addAnalysisText(
-                    label + "符合替卦角度条件，"
-                    + "但替星对应关系或候选盘计算不可用。\n"
-                    + "可能是五黄原运星等无法生成替卦候选盘的情况。");
+                    label + "替卦引擎计算失败。");
 
             return;
         }
 
-        if (!isValidCandidateChart(starsA)
-                || !isValidCandidateChart(starsB)) {
+        if (replacement.rule
+                == ResidenceReplacementEngine.Rule.ZHONGZHOU) {
+
+            ZhongzhouReplacementRules.Result zhongzhou =
+                    replacement.zhongzhouResult;
+
+            if (zhongzhou != null
+                    && zhongzhou.status
+                    == ZhongzhouReplacementRules.Status.OUT_OF_PALACE) {
+
+                addAnalysisText(
+                        label + "："
+                        + ResidenceReplacementEngine
+                                .getZhongzhouStatusText(
+                                        zhongzhou.status)
+                        + "\n"
+                        + "已保留替星分析信息，但不生成普通候选九宫盘。\n"
+                        + replacement.description);
+
+                return;
+            }
+
+            if (zhongzhou != null
+                    && zhongzhou.status
+                    == ZhongzhouReplacementRules.Status.FIVE_YELLOW_SPECIAL) {
+
+                addAnalysisText(
+                        label + "："
+                        + ResidenceReplacementEngine
+                                .getZhongzhouStatusText(
+                                        zhongzhou.status)
+                        + "\n"
+                        + replacement.description);
+
+                return;
+            }
+        }
+
+        if (!replacement.hasReplacement) {
 
             addAnalysisText(
-                    label + "替卦计算已找到对应关系，"
-                    + "但方案A或方案B的九宫数据无效，"
-                    + "暂不显示候选盘。");
+                    label + "：当前规则没有生成有效替卦候选盘。\n"
+                    + replacement.description);
 
             return;
         }
 
-        // 显示替卦基本信息
+        if (!replacement.availableA
+                || !isValidCandidateChart(replacement.starsA)) {
+
+            addAnalysisText(
+                    label + "：方案A候选盘数据无效，不能显示。");
+
+            return;
+        }
+
+        if (!replacement.availableB
+                || !isValidCandidateChart(replacement.starsB)) {
+
+            addAnalysisText(
+                    label + "：方案B候选盘数据无效，不能显示。");
+
+            return;
+        }
+
         StringBuilder info = new StringBuilder();
+
+        info.append("当前规则：")
+                .append(
+                        ResidenceReplacementEngine.getRuleName(
+                                replacement.rule))
+                .append("\n");
+
+        info.append("档案原山向：")
+                .append(savedMountain)
+                .append("\n");
+
+        info.append("角度实际识别山向：")
+                .append(angleResult.mountain)
+                .append("\n");
 
         info.append("角度：")
                 .append(formatAngle(angle))
@@ -964,53 +1206,61 @@ public class XuanKongActivity extends BaseActivity {
                 .append(angleResult.classification)
                 .append("\n");
 
-        info.append("原山：")
-                .append(savedMountain)
-                .append("\n");
-
-        info.append("替卦山：")
-                .append(replacement.replacementMountain)
-                .append("\n");
-
         info.append("原运星：")
                 .append(originalStar)
                 .append(" · ")
-                .append(XuanKongCalculator.getStarName(originalStar))
-                .append("\n");
-
-        info.append("替星：")
-                .append(replacement.replacementStar)
-                .append(" · ")
                 .append(XuanKongCalculator.getStarName(
-                        replacement.replacementStar))
+                        originalStar))
                 .append("\n");
 
-        info.append("三元龙：")
-                .append(getDragonNameByIndex(
-                        replacement.dragonIndex))
-                .append("\n");
+        if (replacement.rule
+                == ResidenceReplacementEngine.Rule.SHEN
+                && replacement.shenResult != null) {
 
-        info.append("原运星所在宫：")
-                .append(getPalaceNameByIndex(
-                        replacement.originalPalace))
-                .append("\n");
+            info.append("替卦山：")
+                    .append(replacement.shenResult.replacementMountain)
+                    .append("\n");
 
-        info.append("替星原宫：")
-                .append(getPalaceNameByIndex(
-                        replacement.replacementPalace))
-                .append("\n");
+            info.append("替星：")
+                    .append(replacement.shenResult.replacementStar)
+                    .append("\n");
 
-        info.append("档案山向核对：一致");
+        } else if (replacement.zhongzhouResult != null) {
+
+            info.append("中州状态：")
+                    .append(
+                            ResidenceReplacementEngine
+                                    .getZhongzhouStatusText(
+                                            replacement.zhongzhouResult.status))
+                    .append("\n");
+
+            info.append("替卦山：")
+                    .append(replacement.zhongzhouResult.replacementMountain)
+                    .append("\n");
+
+            info.append("替星：")
+                    .append(replacement.zhongzhouResult.replacementStar)
+                    .append("\n");
+        }
 
         addAnalysisText(info.toString());
 
         // 方案A
         TextView methodATitle = new TextView(this);
 
+        String methodAName =
+                replacement.rule
+                == ResidenceReplacementEngine.Rule.ZHONGZHOU
+                ? "方案 A · 正式方法"
+                : "方案 A";
+
         methodATitle.setText(
-                "方案 A · "
-                + (replacement.methodAForward
-                        ? "顺飞" : "逆飞"));
+                methodAName
+                + " · "
+                + getDirectionText(
+                        replacement.rule,
+                        replacement,
+                        true));
 
         methodATitle.setTextColor(GOLD);
         methodATitle.setTextSize(16);
@@ -1022,15 +1272,24 @@ public class XuanKongActivity extends BaseActivity {
         chartContainer.addView(methodATitle);
 
         chartContainer.addView(
-                createNinePalaceGrid(starsA));
+                createNinePalaceGrid(replacement.starsA));
 
         // 方案B
         TextView methodBTitle = new TextView(this);
 
+        String methodBName =
+                replacement.rule
+                == ResidenceReplacementEngine.Rule.ZHONGZHOU
+                ? "方案 B · 对照方法"
+                : "方案 B";
+
         methodBTitle.setText(
-                "方案 B · "
-                + (replacement.methodBForward
-                        ? "顺飞" : "逆飞"));
+                methodBName
+                + " · "
+                + getDirectionText(
+                        replacement.rule,
+                        replacement,
+                        false));
 
         methodBTitle.setTextColor(GOLD);
         methodBTitle.setTextSize(16);
@@ -1042,16 +1301,25 @@ public class XuanKongActivity extends BaseActivity {
         chartContainer.addView(methodBTitle);
 
         chartContainer.addView(
-                createNinePalaceGrid(starsB));
+                createNinePalaceGrid(replacement.starsB));
 
         TextView comparison = new TextView(this);
 
+        boolean sameDirection =
+                getDirectionText(
+                        replacement.rule,
+                        replacement,
+                        true).equals(
+                        getDirectionText(
+                                replacement.rule,
+                                replacement,
+                                false));
+
         comparison.setText(
                 "方案A与方案B："
-                + (replacement.methodAForward
-                        == replacement.methodBForward
-                        ? "顺逆方向一致"
-                        : "顺逆方向不同，请结合所采用的规则核对。"));
+                + (sameDirection
+                ? "顺逆方向一致"
+                : "顺逆方向不同"));
 
         comparison.setTextColor(GRAY);
         comparison.setTextSize(12);
@@ -1063,8 +1331,41 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * 检查候选九宫盘是否为有效的九星排列。
-     * 必须包含1至9，每颗星只能出现一次。
+     * 获取当前规则的顺逆方向文字。
+     */
+    private String getDirectionText(
+            ResidenceReplacementEngine.Rule rule,
+            ResidenceReplacementEngine.Result result,
+            boolean methodA) {
+
+        boolean forward;
+
+        if (rule == ResidenceReplacementEngine.Rule.SHEN) {
+
+            if (result.shenResult == null) {
+                return "方向未知";
+            }
+
+            forward = methodA
+                    ? result.shenResult.methodAForward
+                    : result.shenResult.methodBForward;
+
+        } else {
+
+            if (result.zhongzhouResult == null) {
+                return "方向未知";
+            }
+
+            forward = methodA
+                    ? result.zhongzhouResult.methodAForward
+                    : result.zhongzhouResult.methodBForward;
+        }
+
+        return forward ? "顺飞" : "逆飞";
+    }
+
+    /**
+     * 检查候选九宫盘是否有效。
      */
     private boolean isValidCandidateChart(int[] stars) {
 
@@ -1097,9 +1398,13 @@ public class XuanKongActivity extends BaseActivity {
         return true;
     }
 
-    /**
-     * 添加替卦分析文字卡片。
-     */
+    private boolean isValidAngle(double angle) {
+
+        return angle >= 0
+                && !Double.isNaN(angle)
+                && !Double.isInfinite(angle);
+    }
+
     private void addAnalysisText(String message) {
 
         TextView text = new TextView(this);
@@ -1120,9 +1425,6 @@ public class XuanKongActivity extends BaseActivity {
         );
     }
 
-    /**
-     * 获取九宫名称。
-     */
     private String getPalaceNameByIndex(int palace) {
 
         switch (palace) {
@@ -1156,9 +1458,6 @@ public class XuanKongActivity extends BaseActivity {
         }
     }
 
-    /**
-     * 获取三元龙名称。
-     */
     private String getDragonNameByIndex(int index) {
 
         switch (index) {
@@ -1177,9 +1476,6 @@ public class XuanKongActivity extends BaseActivity {
         }
     }
 
-    /**
-     * 格式化带正负号的角度。
-     */
     private String formatSignedAngle(double angle) {
 
         return String.format(
@@ -1254,7 +1550,6 @@ public class XuanKongActivity extends BaseActivity {
         return result;
     }
 
-    // 创建综合九宫格单宫
     private LinearLayout createCombinedPalaceCell(
             int index,
             int periodStar,
@@ -1334,7 +1629,6 @@ public class XuanKongActivity extends BaseActivity {
         return cell;
     }
 
-    // 添加综合排盘中的单颗星
     private void addCombinedStarLine(
             LinearLayout parent,
             String label,
@@ -1362,7 +1656,6 @@ public class XuanKongActivity extends BaseActivity {
                 new LinearLayout.LayoutParams(-1, dp(19)));
     }
 
-    // 获取九星五行
     private String getChartElement(int star) {
 
         if (star <= 0 || star > 9) {
@@ -1372,7 +1665,6 @@ public class XuanKongActivity extends BaseActivity {
         return XuanKongCalculator.getElement(star);
     }
 
-    // 两种五行之间的生克关系
     private String getFiveElementRelation(
             String first,
             String second) {
@@ -1407,7 +1699,6 @@ public class XuanKongActivity extends BaseActivity {
         return "未知";
     }
 
-    // first 是否生 second
     private boolean isGenerating(
             String first,
             String second) {
@@ -1420,7 +1711,6 @@ public class XuanKongActivity extends BaseActivity {
                 || ("金".equals(first) && "水".equals(second));
     }
 
-    // first 是否克 second
     private boolean isRestraining(
             String first,
             String second) {
