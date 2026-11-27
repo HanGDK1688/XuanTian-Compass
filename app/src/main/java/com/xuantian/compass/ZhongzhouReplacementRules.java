@@ -3,8 +3,6 @@ package com.xuantian.compass;
 /**
  * 中州派替卦规则
  *
- * 独立于原有二十四山替星表。
- *
  * 正式方法：A
  * 按原运星所在宫位的同元龙阴阳决定顺逆。
  *
@@ -62,18 +60,6 @@ public final class ZhongzhouReplacementRules {
         public String description;
     }
 
-    /*
-     * 九宫山向顺序：
-     *
-     * 乾：戌、乾、亥
-     * 兑：庚、酉、辛
-     * 艮：丑、艮、寅
-     * 离：丙、午、丁
-     * 坎：壬、子、癸
-     * 坤：未、坤、申
-     * 震：甲、卯、乙
-     * 巽：辰、巽、巳
-     */
     private static final String[][] PALACE_MOUNTAINS = {
             {},
             {"戌", "乾", "亥"},
@@ -90,7 +76,6 @@ public final class ZhongzhouReplacementRules {
      * true = 阳
      * false = 阴
      *
-     * 顺序：
      * 0：地元龙
      * 1：天元龙
      * 2：人元龙
@@ -148,10 +133,6 @@ public final class ZhongzhouReplacementRules {
 
     /**
      * 获取山所在宫位。
-     *
-     * 返回：
-     * 1乾、2兑、3艮、4离、
-     * 5坎、6坤、7震、8巽。
      */
     public static int getMountainPalace(String mountain) {
 
@@ -222,16 +203,6 @@ public final class ZhongzhouReplacementRules {
 
     /**
      * 获取九星原始宫位。
-     *
-     * 洛书九宫：
-     * 1坎、2坤、3震、4巽、5中、
-     * 6乾、7兑、8艮、9离。
-     *
-     * 返回值采用本类宫位编号：
-     * 1乾、2兑、3艮、4离、
-     * 5坎、6坤、7震、8巽。
-     *
-     * 五黄入中返回0。
      */
     private static int getStarOriginalPalace(int star) {
 
@@ -286,11 +257,6 @@ public final class ZhongzhouReplacementRules {
         return PALACE_MOUNTAINS[palace][dragonIndex];
     }
 
-    /**
-     * 根据阴阳决定飞行方向。
-     *
-     * 阳顺飞，阴逆飞。
-     */
     private static String getDirectionText(boolean forward) {
 
         return forward ? "阳顺飞" : "阴逆飞";
@@ -298,12 +264,6 @@ public final class ZhongzhouReplacementRules {
 
     /**
      * 判断实际坐山与兼山的关系。
-     *
-     * replacementAngle：
-     * true：进入兼向判断角度范围。
-     * false：处于下卦角度范围。
-     *
-     * 进入兼向范围不代表一定需要替卦。
      */
     public static Result analyzePair(
             String originalMountain,
@@ -370,18 +330,22 @@ public final class ZhongzhouReplacementRules {
         }
 
         /*
-         * 不同卦宫属于出卦。
+         * 出卦：
          *
-         * 必须终止普通替卦计算。
+         * 保留 OUT_OF_PALACE 状态。
+         * 但不在这里终止替星计算。
+         *
+         * 这是本次修复的关键。
          */
         if (originalPalace != adjacentPalace) {
 
             result.status = Status.OUT_OF_PALACE;
-            result.needsReplacement = false;
+
+            result.needsReplacement = true;
             result.hasReplacement = false;
 
             result.description =
-                    "不同卦宫，属于出卦兼向；不生成普通替卦盘";
+                    "不同卦宫，属于出卦兼向；保留出卦状态并继续检查替星";
 
             return result;
         }
@@ -418,18 +382,6 @@ public final class ZhongzhouReplacementRules {
 
     /**
      * 中州派完整替卦计算。
-     *
-     * originalStar：
-     * 原运星。
-     *
-     * originalMountain：
-     * 原坐山或原朝向。
-     *
-     * adjacentMountain：
-     * 实际兼入的相邻山。
-     *
-     * replacementAngle：
-     * 是否进入替卦角度范围。
      */
     public static Result calculateReplacement(
             int originalStar,
@@ -461,13 +413,14 @@ public final class ZhongzhouReplacementRules {
         result.originalStar = originalStar;
 
         /*
-         * 下卦、无效输入、同宫同阴阳、出卦：
-         * 均不得继续生成普通替卦盘。
+         * 以下情况不能继续普通替星计算。
+         *
+         * 注意：
+         * OUT_OF_PALACE 不在这里。
          */
         if (result.status == Status.INVALID_INPUT
                 || result.status == Status.DOWN_GUA
-                || result.status == Status.SAME_PALACE_SAME_YINYANG
-                || result.status == Status.OUT_OF_PALACE) {
+                || result.status == Status.SAME_PALACE_SAME_YINYANG) {
 
             result.hasReplacement = false;
             result.replacementStar = -1;
@@ -476,10 +429,12 @@ public final class ZhongzhouReplacementRules {
         }
 
         /*
-         * 五黄特殊处理：
+         * 五黄特殊处理。
          *
-         * 不生成普通替星。
+         * 五黄不生成普通替星。
          * 顺逆依据原山元龙阴阳。
+         *
+         * 即使属于出卦，也必须执行五黄特殊处理。
          */
         if (originalStar == 5) {
 
@@ -569,16 +524,11 @@ public final class ZhongzhouReplacementRules {
             return result;
         }
 
-        /*
-         * 找到有效替星。
-         */
         result.hasReplacement = true;
 
         /*
          * 方法 A：
          * 依据原运星宫位中相同元龙的阴阳决定顺逆。
-         *
-         * 阳顺，阴逆。
          */
         result.methodAForward =
                 PALACE_YIN_YANG[starPalace]
@@ -587,8 +537,6 @@ public final class ZhongzhouReplacementRules {
         /*
          * 方法 B：
          * 依据替星原始宫位中相同元龙的阴阳决定顺逆。
-         *
-         * 仅供比较，不作为正式方法。
          */
         int replacementStarPalace =
                 getStarOriginalPalace(replacementStar);
@@ -616,11 +564,22 @@ public final class ZhongzhouReplacementRules {
         result.methodB =
                 getDirectionText(result.methodBForward);
 
-        result.status =
-                Status.SAME_PALACE_DIFFERENT_YINYANG;
+        /*
+         * 关键修复：
+         *
+         * 如果原来是出卦，保留 OUT_OF_PALACE。
+         * 不允许后面的普通替星计算覆盖出卦状态。
+         */
+        if (result.status != Status.OUT_OF_PALACE) {
+
+            result.status =
+                    Status.SAME_PALACE_DIFFERENT_YINYANG;
+        }
 
         result.description =
-                "中州派替卦计算完成；方法A为正式结果，方法B仅供比较";
+                result.status == Status.OUT_OF_PALACE
+                        ? "出卦状态保留；替星信息已计算，仅供规则分析"
+                        : "中州派替卦计算完成；方法A为正式结果，方法B仅供比较";
 
         return result;
     }
