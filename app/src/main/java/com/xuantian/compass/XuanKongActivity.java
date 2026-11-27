@@ -530,12 +530,15 @@ public class XuanKongActivity extends BaseActivity {
                 createNinePalaceGrid(chart.facingStars)
         );
 
-        // 新增：坐山、朝向角度及替卦分析
         addSectionTitle("五、兼向与替卦分析");
 
         addReplacementAnalysis(chart);
 
-        addSectionTitle("六、八宅分析");
+        addSectionTitle("六、替卦候选九宫盘");
+
+        showReplacementCandidateCharts(chart);
+
+        addSectionTitle("七、八宅分析");
 
         EightMansionsCalculator.Result eightResult =
                 EightMansionsCalculator.calculate(
@@ -568,9 +571,9 @@ public class XuanKongActivity extends BaseActivity {
         TextView note = new TextView(this);
 
         note.setText(
-                "说明：玄空三盘当前显示基础下卦法排盘。"
-                + "本页新增兼向与替卦计算分析，但尚未用替卦结果重新生成九宫飞星盘。\n"
-                + "替卦顺逆同时列出方案A、方案B，供后续核对不同规则。\n"
+                "说明：基础三盘保留原下卦排盘；"
+                + "替卦候选盘另列方案A、方案B，供核对，不覆盖基础盘。\n"
+                + "候选盘只有在角度判定为替卦且档案山向一致时显示。\n"
                 + "五行关系用于传统术数参考，不代表现实结果的确定预测。\n"
                 + "八宅分析按住宅坐山所属宅卦计算，"
                 + "不涉及户主命卦。");
@@ -585,10 +588,7 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * 新增住宅兼向与替卦分析。
-     *
-     * 山盘使用山盘中宫星和坐山。
-     * 向盘使用向盘中宫星和朝向。
+     * 替卦分析。
      */
     private void addReplacementAnalysis(
             XuanKongCalculator.ResidenceChart chart) {
@@ -633,7 +633,7 @@ public class XuanKongActivity extends BaseActivity {
     }
 
     /**
-     * 生成单个坐山或朝向的替卦分析。
+     * 单个坐山或朝向的替卦分析。
      */
     private void appendReplacementAnalysis(
             StringBuilder result,
@@ -685,6 +685,14 @@ public class XuanKongActivity extends BaseActivity {
                 .append(angleResult.direction)
                 .append("\n");
 
+        if (angleResult.isBoundary) {
+
+            result.append("当前角度处于边界区域，");
+            result.append("需要人工复核，暂不计算替卦。\n");
+
+            return;
+        }
+
         if (!savedMountain.equals(angleResult.mountain)) {
 
             result.append("⚠ 注意：角度计算所属山为")
@@ -699,14 +707,6 @@ public class XuanKongActivity extends BaseActivity {
         }
 
         result.append("所属山向核对：一致\n");
-
-        if (angleResult.isBoundary) {
-
-            result.append("当前角度处于边界区域，");
-            result.append("需要人工复核，暂不计算替卦。\n");
-
-            return;
-        }
 
         if (angleResult.isDownGua) {
 
@@ -787,6 +787,314 @@ public class XuanKongActivity extends BaseActivity {
                         ? "计算成功"
                         : "未找到有效替卦对应关系")
                 .append("\n");
+    }
+
+    /**
+     * 显示坐山和朝向的替卦候选九宫盘。
+     *
+     * 两者分别判断，互不影响。
+     */
+    private void showReplacementCandidateCharts(
+            XuanKongCalculator.ResidenceChart chart) {
+
+        if (chart == null) {
+            addAnalysisText("住宅排盘数据无效，无法显示替卦候选盘。");
+            return;
+        }
+
+        TextView guide = new TextView(this);
+
+        guide.setText(
+                "以下为替卦候选盘，不会覆盖上方基础三盘。\n"
+                + "只有角度属于替卦范围、档案山向一致，"
+                + "且候选盘数据有效时，才显示对应九宫盘。\n"
+                + "方案A、方案B分别展示，供进一步核对。");
+
+        guide.setTextColor(GRAY);
+        guide.setTextSize(12);
+        guide.setGravity(Gravity.CENTER);
+        guide.setLineSpacing(dp(4), 1f);
+        guide.setPadding(dp(8), dp(4), dp(8), dp(12));
+
+        chartContainer.addView(guide);
+
+        // 坐山候选盘
+        showOneReplacementCandidate(
+                "坐山",
+                sittingAngle,
+                sittingMountain,
+                chart.mountainCenterStar,
+                chart.mountainReplacementResult,
+                chart.mountainReplacementAvailable,
+                chart.mountainReplacementStarsA,
+                chart.mountainReplacementStarsB
+        );
+
+        // 朝向候选盘
+        showOneReplacementCandidate(
+                "朝向",
+                facingAngle,
+                facingMountain,
+                chart.facingCenterStar,
+                chart.facingReplacementResult,
+                chart.facingReplacementAvailable,
+                chart.facingReplacementStarsA,
+                chart.facingReplacementStarsB
+        );
+    }
+
+    /**
+     * 单独显示坐山或朝向的替卦候选盘。
+     */
+    private void showOneReplacementCandidate(
+            String label,
+            double angle,
+            String savedMountain,
+            int originalStar,
+            XuanKongReplacementCalculator.ReplacementResult replacement,
+            boolean available,
+            int[] starsA,
+            int[] starsB) {
+
+        TextView title = new TextView(this);
+
+        title.setText("【" + label + "替卦候选盘】");
+        title.setTextColor(GOLD);
+        title.setTextSize(16);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(dp(4), dp(10), dp(4), dp(8));
+
+        chartContainer.addView(title);
+
+        if (angle < 0
+                || Double.isNaN(angle)
+                || Double.isInfinite(angle)) {
+
+            addAnalysisText(
+                    label + "角度尚未设置，暂不显示替卦候选盘。");
+
+            return;
+        }
+
+        XuanKongReplacementCalculator.AngleResult angleResult =
+                XuanKongReplacementCalculator.analyzeBearing(
+                        angle);
+
+        if (angleResult == null) {
+
+            addAnalysisText(
+                    label + "角度分析失败，暂不显示候选盘。");
+
+            return;
+        }
+
+        if (angleResult.isBoundary) {
+
+            addAnalysisText(
+                    label + "当前角度为边界区域，"
+                    + "需要人工复核，暂不显示替卦候选盘。");
+
+            return;
+        }
+
+        if (savedMountain == null
+                || savedMountain.trim().isEmpty()
+                || !savedMountain.equals(angleResult.mountain)) {
+
+            addAnalysisText(
+                    label + "角度识别为"
+                    + angleResult.mountain
+                    + "，住宅档案保存为"
+                    + savedMountain
+                    + "，山向不一致，暂不显示候选盘。");
+
+            return;
+        }
+
+        if (angleResult.isDownGua) {
+
+            addAnalysisText(
+                    label + "当前角度为下卦范围，"
+                    + "不需要显示替卦候选盘。");
+
+            return;
+        }
+
+        if (!angleResult.isReplacementGua) {
+
+            addAnalysisText(
+                    label + "当前角度不属于替卦范围，"
+                    + "暂不显示候选盘。");
+
+            return;
+        }
+
+        if (!available
+                || replacement == null
+                || !replacement.hasReplacement) {
+
+            addAnalysisText(
+                    label + "符合替卦角度条件，"
+                    + "但替星对应关系或候选盘计算不可用。\n"
+                    + "可能是五黄原运星等无法生成替卦候选盘的情况。");
+
+            return;
+        }
+
+        if (!isValidCandidateChart(starsA)
+                || !isValidCandidateChart(starsB)) {
+
+            addAnalysisText(
+                    label + "替卦计算已找到对应关系，"
+                    + "但方案A或方案B的九宫数据无效，"
+                    + "暂不显示候选盘。");
+
+            return;
+        }
+
+        // 显示替卦基本信息
+        StringBuilder info = new StringBuilder();
+
+        info.append("角度：")
+                .append(formatAngle(angle))
+                .append("°\n");
+
+        info.append("角度判定：")
+                .append(angleResult.classification)
+                .append("\n");
+
+        info.append("原山：")
+                .append(savedMountain)
+                .append("\n");
+
+        info.append("替卦山：")
+                .append(replacement.replacementMountain)
+                .append("\n");
+
+        info.append("原运星：")
+                .append(originalStar)
+                .append(" · ")
+                .append(XuanKongCalculator.getStarName(originalStar))
+                .append("\n");
+
+        info.append("替星：")
+                .append(replacement.replacementStar)
+                .append(" · ")
+                .append(XuanKongCalculator.getStarName(
+                        replacement.replacementStar))
+                .append("\n");
+
+        info.append("三元龙：")
+                .append(getDragonNameByIndex(
+                        replacement.dragonIndex))
+                .append("\n");
+
+        info.append("原运星所在宫：")
+                .append(getPalaceNameByIndex(
+                        replacement.originalPalace))
+                .append("\n");
+
+        info.append("替星原宫：")
+                .append(getPalaceNameByIndex(
+                        replacement.replacementPalace))
+                .append("\n");
+
+        info.append("档案山向核对：一致");
+
+        addAnalysisText(info.toString());
+
+        // 方案A
+        TextView methodATitle = new TextView(this);
+
+        methodATitle.setText(
+                "方案 A · "
+                + (replacement.methodAForward
+                        ? "顺飞" : "逆飞"));
+
+        methodATitle.setTextColor(GOLD);
+        methodATitle.setTextSize(16);
+        methodATitle.setTypeface(null, Typeface.BOLD);
+        methodATitle.setGravity(Gravity.CENTER);
+        methodATitle.setPadding(
+                dp(4), dp(12), dp(4), dp(4));
+
+        chartContainer.addView(methodATitle);
+
+        chartContainer.addView(
+                createNinePalaceGrid(starsA));
+
+        // 方案B
+        TextView methodBTitle = new TextView(this);
+
+        methodBTitle.setText(
+                "方案 B · "
+                + (replacement.methodBForward
+                        ? "顺飞" : "逆飞"));
+
+        methodBTitle.setTextColor(GOLD);
+        methodBTitle.setTextSize(16);
+        methodBTitle.setTypeface(null, Typeface.BOLD);
+        methodBTitle.setGravity(Gravity.CENTER);
+        methodBTitle.setPadding(
+                dp(4), dp(12), dp(4), dp(4));
+
+        chartContainer.addView(methodBTitle);
+
+        chartContainer.addView(
+                createNinePalaceGrid(starsB));
+
+        TextView comparison = new TextView(this);
+
+        comparison.setText(
+                "方案A与方案B："
+                + (replacement.methodAForward
+                        == replacement.methodBForward
+                        ? "顺逆方向一致"
+                        : "顺逆方向不同，请结合所采用的规则核对。"));
+
+        comparison.setTextColor(GRAY);
+        comparison.setTextSize(12);
+        comparison.setGravity(Gravity.CENTER);
+        comparison.setPadding(
+                dp(5), dp(4), dp(5), dp(10));
+
+        chartContainer.addView(comparison);
+    }
+
+    /**
+     * 检查候选九宫盘是否为有效的九星排列。
+     * 必须包含1至9，每颗星只能出现一次。
+     */
+    private boolean isValidCandidateChart(int[] stars) {
+
+        if (stars == null || stars.length != 9) {
+            return false;
+        }
+
+        boolean[] found = new boolean[10];
+
+        for (int star : stars) {
+
+            if (star < 1 || star > 9) {
+                return false;
+            }
+
+            if (found[star]) {
+                return false;
+            }
+
+            found[star] = true;
+        }
+
+        for (int i = 1; i <= 9; i++) {
+
+            if (!found[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
