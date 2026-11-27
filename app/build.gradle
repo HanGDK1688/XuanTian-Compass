@@ -1,16 +1,28 @@
 plugins {
-    id 'com.android.application'
+id 'com.android.application'
 }
 
 android {
-    namespace 'com.xuantian.compass'
-    compileSdk 35
+namespace 'com.xuantian.compass'
+compileSdk 35
 
-    defaultConfig {
-        applicationId 'com.xuantian.compass'
-        minSdk 23
-        targetSdk 35
-        versionCode 1
-        versionName '1.0'
+defaultConfig {
+    applicationId 'com.xuantian.compass'
+    minSdk 23
+    targetSdk 35
+    versionCode 1
+    versionName '1.0'
+}
+
+testOptions {
+    unitTests {
+        includeAndroidResources = true
     }
+}
+
+}
+
+dependencies {
+// Java 单元测试框架
+testImplementation 'junit:junit:4.13.2'
 }
