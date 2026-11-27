@@ -202,7 +202,6 @@ public class XuanKongCalculatorTest {
                         year + "年，" + mountain + "山，"
                                 + chart.facingMountain + "向";
 
-                // 坐山替卦方案A、B
                 assertReplacementChart(
                         description + "坐山替卦",
                         chart.mountainReplacementAvailable,
@@ -215,7 +214,6 @@ public class XuanKongCalculatorTest {
                     mountainAvailableCount++;
                 }
 
-                // 朝向替卦方案A、B
                 assertReplacementChart(
                         description + "朝向替卦",
                         chart.facingReplacementAvailable,
@@ -297,6 +295,237 @@ public class XuanKongCalculatorTest {
         assertArrayEquals("向盘结果不符",
                 new int[]{1, 9, 8, 7, 6, 5, 4, 3, 2},
                 chart.facingStars);
+    }
+
+    /**
+     * 测试顺飞九宫数组。
+     *
+     * 中宫入三碧，顺飞：
+     * 中、乾、兑、艮、离、坎、坤、震、巽。
+     */
+    @Test
+    public void testForwardFlyingArray() {
+
+        int[] stars =
+                XuanKongCalculator.flyFromCenter(3, true);
+
+        assertArrayEquals(
+                "三碧顺飞数组错误",
+                new int[]{3, 4, 5, 6, 7, 8, 9, 1, 2},
+                stars
+        );
+
+        assertValidNineStars(stars);
+    }
+
+    /**
+     * 测试逆飞九宫数组。
+     */
+    @Test
+    public void testReverseFlyingArray() {
+
+        int[] stars =
+                XuanKongCalculator.flyFromCenter(3, false);
+
+        assertArrayEquals(
+                "三碧逆飞数组错误",
+                new int[]{3, 2, 1, 9, 8, 7, 6, 5, 4},
+                stars
+        );
+
+        assertValidNineStars(stars);
+    }
+
+    /**
+     * 测试顺飞与逆飞结果确实不同。
+     */
+    @Test
+    public void testForwardAndReverseArraysAreDifferent() {
+
+        int[] forward =
+                XuanKongCalculator.flyFromCenter(2, true);
+
+        int[] reverse =
+                XuanKongCalculator.flyFromCenter(2, false);
+
+        assertValidNineStars(forward);
+        assertValidNineStars(reverse);
+
+        assertFalse(
+                "顺飞和逆飞不能生成相同的九宫盘",
+                java.util.Arrays.equals(forward, reverse)
+        );
+    }
+
+    /**
+     * 测试替卦方案A、B方向不同的情况。
+     *
+     * 三碧原运星、子山：
+     * 方案A逆飞，方案B顺飞。
+     */
+    @Test
+    public void testReplacementMethodsDifferentDirections() {
+
+        XuanKongReplacementCalculator.ReplacementResult result =
+                XuanKongReplacementCalculator.calculateReplacement(
+                        3, "子"
+                );
+
+        assertNotNull(result);
+        assertTrue(result.hasReplacement);
+
+        assertFalse("方案A应逆飞", result.methodAForward);
+        assertTrue("方案B应顺飞", result.methodBForward);
+
+        int[] starsA =
+                XuanKongCalculator.flyFromCenter(
+                        result.replacementStar,
+                        result.methodAForward
+                );
+
+        int[] starsB =
+                XuanKongCalculator.flyFromCenter(
+                        result.replacementStar,
+                        result.methodBForward
+                );
+
+        assertValidNineStars(starsA);
+        assertValidNineStars(starsB);
+
+        assertFalse(
+                "方案A和方案B方向不同，九宫数组也应不同",
+                java.util.Arrays.equals(starsA, starsB)
+        );
+    }
+
+    /**
+     * 测试另一组相反方向组合。
+     *
+     * 八白原运星、子山：
+     * 方案A顺飞，方案B逆飞。
+     */
+    @Test
+    public void testReplacementMethodsOppositeDirections() {
+
+        XuanKongReplacementCalculator.ReplacementResult result =
+                XuanKongReplacementCalculator.calculateReplacement(
+                        8, "子"
+                );
+
+        assertNotNull(result);
+        assertTrue(result.hasReplacement);
+
+        assertTrue("方案A应顺飞", result.methodAForward);
+        assertFalse("方案B应逆飞", result.methodBForward);
+
+        int[] starsA =
+                XuanKongCalculator.flyFromCenter(
+                        result.replacementStar,
+                        result.methodAForward
+                );
+
+        int[] starsB =
+                XuanKongCalculator.flyFromCenter(
+                        result.replacementStar,
+                        result.methodBForward
+                );
+
+        assertValidNineStars(starsA);
+        assertValidNineStars(starsB);
+
+        assertFalse(
+                "两种相反方向必须生成不同九宫盘",
+                java.util.Arrays.equals(starsA, starsB)
+        );
+    }
+
+    /**
+     * 测试A、B方向相同时，生成的九宫盘相同。
+     *
+     * 四绿原运星、子山：
+     * 方案A和方案B均顺飞。
+     */
+    @Test
+    public void testReplacementMethodsSameDirection() {
+
+        XuanKongReplacementCalculator.ReplacementResult result =
+                XuanKongReplacementCalculator.calculateReplacement(
+                        4, "子"
+                );
+
+        assertNotNull(result);
+        assertTrue(result.hasReplacement);
+
+        assertTrue("方案A应顺飞", result.methodAForward);
+        assertTrue("方案B应顺飞", result.methodBForward);
+
+        int[] starsA =
+                XuanKongCalculator.flyFromCenter(
+                        result.replacementStar,
+                        result.methodAForward
+                );
+
+        int[] starsB =
+                XuanKongCalculator.flyFromCenter(
+                        result.replacementStar,
+                        result.methodBForward
+                );
+
+        assertValidNineStars(starsA);
+        assertValidNineStars(starsB);
+
+        assertArrayEquals(
+                "A、B同为顺飞时，九宫数组应完全相同",
+                starsA,
+                starsB
+        );
+    }
+
+    /**
+     * 测试九宫完整性验证器能够识别非法数据。
+     */
+    @Test
+    public void testNineStarChartValidation() {
+
+        assertTrue(
+                "正常九宫盘应通过验证",
+                XuanKongCalculator.isValidNineStarChart(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9}
+                )
+        );
+
+        assertFalse(
+                "重复星数应验证失败",
+                XuanKongCalculator.isValidNineStarChart(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 8}
+                )
+        );
+
+        assertFalse(
+                "缺少星数应验证失败",
+                XuanKongCalculator.isValidNineStarChart(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 0}
+                )
+        );
+
+        assertFalse(
+                "超出范围的星数应验证失败",
+                XuanKongCalculator.isValidNineStarChart(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 10}
+                )
+        );
+
+        assertFalse(
+                "空数组应验证失败",
+                XuanKongCalculator.isValidNineStarChart(null)
+        );
+
+        assertFalse(
+                "长度不为9的数组应验证失败",
+                XuanKongCalculator.isValidNineStarChart(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8}
+                )
+        );
     }
 
     /**
