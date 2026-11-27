@@ -29,7 +29,7 @@ import android.widget.Toast;
 
 import java.util.Locale;
 
-public class ResidenceDirectionActivity extends Activity
+public class ResidenceDirectionActivity extends BaseActivity
         implements SensorEventListener {
 
     private EditText angleInput;
@@ -388,9 +388,6 @@ public class ResidenceDirectionActivity extends Activity
         setContentView(scrollView);
     }
 
-    /**
-     * 确认当前角度，并返回住宅资料页面
-     */
     private void confirmDirection() {
 
         hideKeyboard();
@@ -493,9 +490,6 @@ public class ResidenceDirectionActivity extends Activity
                         .getDisplayMetrics().density + 0.5f);
     }
 
-    /**
-     * 仿古九层综合罗盘绘制区域
-     */
     private class CompassDialView extends View {
 
         private final Paint paint =
