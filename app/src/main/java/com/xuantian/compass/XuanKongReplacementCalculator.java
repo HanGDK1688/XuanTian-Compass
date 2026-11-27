@@ -62,7 +62,7 @@ public class XuanKongReplacementCalculator {
      * 七赤：艮、丑、丙、辛、酉
      * 九紫：寅、午、庚、丁
      *
-     * 这张表作为当前项目选定的替星数据，
+     * 这是当前项目选定的替星数据。
      * 后续仍需结合具体替卦流派规则验证。
      */
     public static int getReplacementStar(String mountain) {
@@ -136,19 +136,31 @@ public class XuanKongReplacementCalculator {
 
     public static class ReplacementResult {
 
+        // 实际测量的原山
         public String originalMountain;
 
+        // 原运星
         public int originalStar;
+
+        // 按原运星原宫同元龙找到的替卦山
+        public String replacementMountain;
+
+        // 替星
         public int replacementStar;
 
+        // 原运星所在宫
         public int originalPalace;
+
+        // 替星所在宫
         public int replacementPalace;
 
+        // 三元龙索引
         public int dragonIndex;
 
         public boolean originalPalaceYang;
         public boolean replacementPalaceYang;
 
+        // 方案A、方案B顺逆
         public boolean methodAForward;
         public boolean methodBForward;
 
@@ -196,9 +208,7 @@ public class XuanKongReplacementCalculator {
     /**
      * 根据罗盘角度判断二十四山。
      *
-     * 角度约定：
-     * 0度为正北。
-     * 顺时针增加。
+     * 0度为正北，顺时针增加。
      */
     public static AngleResult analyzeBearing(double bearing) {
 
@@ -249,6 +259,7 @@ public class XuanKongReplacementCalculator {
                 < REPLACEMENT_LIMIT) {
 
             result.classification = "替卦";
+
             result.isDownGua = false;
             result.isReplacementGua = true;
             result.isBoundary = false;
@@ -264,12 +275,12 @@ public class XuanKongReplacementCalculator {
                         "兼" + result.previousMountain;
             }
 
-            result.description =
-                    "进入替卦范围";
+            result.description = "进入替卦范围";
 
         } else {
 
             result.classification = "边界";
+
             result.isDownGua = false;
             result.isReplacementGua = false;
             result.isBoundary = true;
@@ -417,6 +428,7 @@ public class XuanKongReplacementCalculator {
         if (palace < 1 || palace > 8
                 || dragonIndex < 0
                 || dragonIndex > 2) {
+
             throw new IllegalArgumentException(
                     "宫位或三元龙索引错误"
             );
@@ -427,6 +439,18 @@ public class XuanKongReplacementCalculator {
 
     /**
      * 替卦计算。
+     *
+     * 第一步：
+     * 根据原山确定三元龙。
+     *
+     * 第二步：
+     * 根据原运星找到原运星所在宫。
+     *
+     * 第三步：
+     * 在原运星所在宫，找到相同三元龙对应的山。
+     *
+     * 第四步：
+     * 根据这座山查询替星。
      *
      * 方法A：
      * 按原运星原宫的同元龙阴阳判断顺逆。
@@ -451,9 +475,11 @@ public class XuanKongReplacementCalculator {
             return null;
         }
 
+        // 原山所在宫
         int originalMountainPalace =
                 getMountainPalace(originalMountain);
 
+        // 原山的三元龙
         int dragonIndex =
                 getDragonIndex(
                         originalMountainPalace,
@@ -464,29 +490,56 @@ public class XuanKongReplacementCalculator {
             return null;
         }
 
+        // 原运星所在宫
+        int originalStarPalace =
+                getStarOriginalPalace(originalStar);
+
+        if (originalStarPalace < 1
+                || originalStarPalace > 8) {
+            return null;
+        }
+
+        // 在原运星所在宫，找相同三元龙对应的山
+        String replacementMountain =
+                getMountainByDragon(
+                        originalStarPalace,
+                        dragonIndex
+                );
+
+        if (replacementMountain == null) {
+            return null;
+        }
+
+        // 根据这座山查询替星
         int replacementStar =
-                getReplacementStar(originalMountain);
+                getReplacementStar(replacementMountain);
 
         if (replacementStar < 1) {
             return null;
         }
 
-        int originalStarPalace =
-                getStarOriginalPalace(originalStar);
-
+        // 替星所在宫
         int replacementStarPalace =
                 getStarOriginalPalace(replacementStar);
 
-        if (originalStarPalace < 1
-                || replacementStarPalace < 1) {
+        if (replacementStarPalace < 1
+                || replacementStarPalace > 8) {
             return null;
         }
 
+        // 方案A：原运星原宫同元龙阴阳
         boolean methodAYang =
-                isYang(originalStarPalace, dragonIndex);
+                isYang(
+                        originalStarPalace,
+                        dragonIndex
+                );
 
+        // 方案B：替星原宫同元龙阴阳
         boolean methodBYang =
-                isYang(replacementStarPalace, dragonIndex);
+                isYang(
+                        replacementStarPalace,
+                        dragonIndex
+                );
 
         ReplacementResult result =
                 new ReplacementResult();
@@ -494,10 +547,17 @@ public class XuanKongReplacementCalculator {
         result.originalMountain = originalMountain;
 
         result.originalStar = originalStar;
+
+        result.replacementMountain =
+                replacementMountain;
+
         result.replacementStar = replacementStar;
 
-        result.originalPalace = originalStarPalace;
-        result.replacementPalace = replacementStarPalace;
+        result.originalPalace =
+                originalStarPalace;
+
+        result.replacementPalace =
+                replacementStarPalace;
 
         result.dragonIndex = dragonIndex;
 
@@ -526,12 +586,20 @@ public class XuanKongReplacementCalculator {
                 .append(originalStar)
                 .append("\n");
 
-        detail.append("替星：")
-                .append(replacementStar)
+        detail.append("原运星所在宫：")
+                .append(getPalaceName(originalStarPalace))
                 .append("\n");
 
-        detail.append("三元龙：")
+        detail.append("原山三元龙：")
                 .append(getDragonName(dragonIndex))
+                .append("\n");
+
+        detail.append("对应替卦山：")
+                .append(replacementMountain)
+                .append("\n");
+
+        detail.append("替星：")
+                .append(replacementStar)
                 .append("\n");
 
         detail.append("方法A：")
@@ -566,6 +634,42 @@ public class XuanKongReplacementCalculator {
 
             default:
                 return "未知";
+        }
+    }
+
+    /**
+     * 获取九宫名称。
+     */
+    private static String getPalaceName(int palace) {
+
+        switch (palace) {
+
+            case 1:
+                return "乾宫";
+
+            case 2:
+                return "兑宫";
+
+            case 3:
+                return "艮宫";
+
+            case 4:
+                return "离宫";
+
+            case 5:
+                return "坎宫";
+
+            case 6:
+                return "坤宫";
+
+            case 7:
+                return "震宫";
+
+            case 8:
+                return "巽宫";
+
+            default:
+                return "未知宫位";
         }
     }
 
