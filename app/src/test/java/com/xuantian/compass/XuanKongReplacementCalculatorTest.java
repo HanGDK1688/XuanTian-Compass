@@ -217,6 +217,11 @@ public class XuanKongReplacementCalculatorTest {
 
     /**
      * 测试乙山替卦计算。
+     *
+     * 乙山属于人元龙。
+     * 六白原宫为乾宫。
+     * 乾宫人元龙为亥。
+     * 亥对应六白替星。
      */
     @Test
     public void testYiMountainReplacementCalculation() {
@@ -230,10 +235,11 @@ public class XuanKongReplacementCalculatorTest {
         assertEquals("乙", result.originalMountain);
 
         assertEquals(6, result.originalStar);
-        assertEquals(2, result.replacementStar);
+        assertEquals("亥", result.replacementMountain);
+        assertEquals(6, result.replacementStar);
 
         assertEquals(1, result.originalPalace);
-        assertEquals(6, result.replacementPalace);
+        assertEquals(1, result.replacementPalace);
 
         assertEquals(2, result.dragonIndex);
 
@@ -248,6 +254,11 @@ public class XuanKongReplacementCalculatorTest {
 
     /**
      * 测试辛向替卦计算。
+     *
+     * 辛向属于人元龙。
+     * 一白原宫为坎宫。
+     * 坎宫人元龙为癸。
+     * 癸对应一白替星。
      */
     @Test
     public void testXinMountainReplacementCalculation() {
@@ -261,10 +272,11 @@ public class XuanKongReplacementCalculatorTest {
         assertEquals("辛", result.originalMountain);
 
         assertEquals(1, result.originalStar);
-        assertEquals(7, result.replacementStar);
+        assertEquals("癸", result.replacementMountain);
+        assertEquals(1, result.replacementStar);
 
         assertEquals(5, result.originalPalace);
-        assertEquals(2, result.replacementPalace);
+        assertEquals(5, result.replacementPalace);
 
         assertEquals(2, result.dragonIndex);
 
