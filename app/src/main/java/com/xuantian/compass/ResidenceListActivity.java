@@ -20,7 +20,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
-public class ResidenceListActivity extends Activity {
+public class ResidenceListActivity extends BaseActivity { {
 
     private ResidenceStorage storage;
     private LinearLayout listContainer;
