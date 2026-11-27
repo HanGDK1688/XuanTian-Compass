@@ -37,6 +37,7 @@ public class BaseActivity extends Activity {
     private final Runnable longPressRunnable = new Runnable() {
         @Override
         public void run() {
+
             if (longPressCancelled || longPressHandled) {
                 return;
             }
@@ -62,7 +63,9 @@ public class BaseActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+        touchSlop = ViewConfiguration
+                .get(this)
+                .getScaledTouchSlop();
     }
 
     @Override
@@ -71,6 +74,7 @@ public class BaseActivity extends Activity {
         switch (event.getActionMasked()) {
 
             case MotionEvent.ACTION_DOWN:
+
                 handler.removeCallbacks(longPressRunnable);
 
                 downX = event.getRawX();
@@ -83,9 +87,11 @@ public class BaseActivity extends Activity {
                         longPressRunnable,
                         LONG_PRESS_TIME
                 );
+
                 break;
 
             case MotionEvent.ACTION_MOVE:
+
                 float dx = Math.abs(event.getRawX() - downX);
                 float dy = Math.abs(event.getRawY() - downY);
 
@@ -96,16 +102,19 @@ public class BaseActivity extends Activity {
                 if (longPressHandled) {
                     return true;
                 }
+
                 break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+
                 handler.removeCallbacks(longPressRunnable);
 
                 if (longPressHandled) {
                     longPressHandled = false;
                     return true;
                 }
+
                 break;
         }
 
@@ -113,6 +122,7 @@ public class BaseActivity extends Activity {
     }
 
     private void cancelLongPress() {
+
         longPressCancelled = true;
         handler.removeCallbacks(longPressRunnable);
     }
@@ -131,9 +141,11 @@ public class BaseActivity extends Activity {
         }
 
         if (view instanceof ViewGroup) {
+
             ViewGroup group = (ViewGroup) view;
 
             for (int i = group.getChildCount() - 1; i >= 0; i--) {
+
                 View child = findViewAt(
                         group.getChildAt(i),
                         rawX,
@@ -186,13 +198,16 @@ public class BaseActivity extends Activity {
 
         String selectedText = getSelectedText(touchedView);
 
-        if (selectedText != null && !selectedText.trim().isEmpty()) {
+        if (selectedText != null
+                && !selectedText.trim().isEmpty()) {
+
             addMenuItem(menu, "复制", () -> {
                 CopyHelper.copyText(this, selectedText);
             });
         }
 
         addMenuItem(menu, "全部复制", () -> {
+
             String allText = collectVisibleText(
                     getWindow().getDecorView()
             );
@@ -201,6 +216,7 @@ public class BaseActivity extends Activity {
         });
 
         addMenuItem(menu, "取消", () -> {
+
             if (copyPopup != null) {
                 copyPopup.dismiss();
             }
@@ -237,17 +253,26 @@ public class BaseActivity extends Activity {
             String title,
             Runnable action
     ) {
+
         TextView item = new TextView(this);
+
         item.setText(title);
         item.setTextSize(15);
         item.setTextColor(0xFFFFFFFF);
         item.setGravity(Gravity.CENTER);
-        item.setPadding(dp(12), dp(12), dp(12), dp(12));
+        item.setPadding(
+                dp(12),
+                dp(12),
+                dp(12),
+                dp(12)
+        );
 
         item.setOnClickListener(v -> {
+
             if (copyPopup != null) {
                 copyPopup.dismiss();
             }
+
             action.run();
         });
 
@@ -273,83 +298,4 @@ public class BaseActivity extends Activity {
         }
 
         return null;
-    }
-
-    private String collectVisibleText(View view) {
-
-        List<String> texts = new ArrayList<>();
-
-        collectTextRecursively(view, texts);
-
-        StringBuilder result = new StringBuilder();
-
-        for (String text : texts) {
-            if (text == null || text.trim().isEmpty()) {
-                continue;
-            }
-
-            if (result.length() > 0) {
-                result.append("\n");
-            }
-
-            result.append(text.trim());
-        }
-
-        return result.toString();
-    }
-
-    private void collectTextRecursively(
-            View view,
-            List<String> texts
-    ) {
-
-        if (view == null || !view.isShown()) {
-            return;
-        }
-
-        Rect rect = new Rect();
-
-        if (!view.getGlobalVisibleRect(rect)) {
-            return;
-        }
-
-        if (view instanceof EditText) {
-            return;
-        }
-
-        if (view instanceof TextView) {
-            CharSequence text = ((TextView) view).getText();
-
-            if (text != null && text.length() > 0) {
-                texts.add(text.toString());
-            }
-        }
-
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-
-            for (int i = 0; i < group.getChildCount(); i++) {
-                collectTextRecursively(
-                        group.getChildAt(i),
-                        texts
-                );
-            }
-        }
-    }
-
-    private int dp(float value) {
-        return (int) (value * getResources()
-                .getDisplayMetrics().density + 0.5f);
-    }
-
-    @Override
-    protected void onDestroy() {
-        handler.removeCallbacks(longPressRunnable);
-
-        if (copyPopup != null && copyPopup.isShowing()) {
-            copyPopup.dismiss();
-        }
-
-        super.onDestroy();
-    }
-}
+   
