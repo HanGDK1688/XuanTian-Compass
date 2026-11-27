@@ -298,4 +298,94 @@ public class BaseActivity extends Activity {
         }
 
         return null;
-   
+    }
+
+    /**
+     * 收集整个页面布局中的文字。
+     * 不再根据屏幕可见区域过滤子控件，
+     * 因此可以收集 ScrollView 等滚动区域中的文字。
+     */
+    private String collectVisibleText(View view) {
+
+        List<String> texts = new ArrayList<>();
+
+        collectTextRecursively(view, texts);
+
+        StringBuilder result = new StringBuilder();
+
+        for (String text : texts) {
+
+            if (text == null || text.trim().isEmpty()) {
+                continue;
+            }
+
+            if (result.length() > 0) {
+                result.append("\n");
+            }
+
+            result.append(text.trim());
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * 递归遍历整个页面控件树。
+     */
+    private void collectTextRecursively(
+            View view,
+            List<String> texts
+    ) {
+
+        if (view == null || !view.isShown()) {
+            return;
+        }
+
+        // 不复制输入框内容，避免复制用户正在输入的数据。
+        if (view instanceof EditText) {
+            return;
+        }
+
+        if (view instanceof TextView) {
+
+            CharSequence text = ((TextView) view).getText();
+
+            if (text != null && text.length() > 0) {
+                texts.add(text.toString());
+            }
+        }
+
+        if (view instanceof ViewGroup) {
+
+            ViewGroup group = (ViewGroup) view;
+
+            for (int i = 0; i < group.getChildCount(); i++) {
+
+                collectTextRecursively(
+                        group.getChildAt(i),
+                        texts
+                );
+            }
+        }
+    }
+
+    private int dp(float value) {
+
+        return (int) (
+                value * getResources()
+                        .getDisplayMetrics().density + 0.5f
+        );
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        handler.removeCallbacks(longPressRunnable);
+
+        if (copyPopup != null && copyPopup.isShowing()) {
+            copyPopup.dismiss();
+        }
+
+        super.onDestroy();
+    }
+}
