@@ -41,6 +41,41 @@ public class XuanKongCalculatorTest {
     }
 
     /**
+     * 验证一组替卦候选盘。
+     */
+    private void assertReplacementChart(
+            String description,
+            boolean available,
+            XuanKongReplacementCalculator.ReplacementResult result,
+            int[] starsA,
+            int[] starsB) {
+
+        if (!available) {
+            assertNull(description + "：不可用时结果应为null", result);
+            assertNull(description + "：方案A应为null", starsA);
+            assertNull(description + "：方案B应为null", starsB);
+            return;
+        }
+
+        assertNotNull(description + "：替卦结果不能为空", result);
+        assertTrue(description + "：替卦结果必须有效",
+                result.hasReplacement);
+
+        assertTrue(description + "：替星必须在1至9之间",
+                result.replacementStar >= 1
+                        && result.replacementStar <= 9);
+
+        assertValidNineStars(starsA);
+        assertValidNineStars(starsB);
+
+        assertEquals(description + "：方案A中宫星必须等于替星",
+                result.replacementStar, starsA[0]);
+
+        assertEquals(description + "：方案B中宫星必须等于替星",
+                result.replacementStar, starsB[0]);
+    }
+
+    /**
      * 测试九个元运。
      */
     @Test
@@ -144,6 +179,97 @@ public class XuanKongCalculatorTest {
         }
 
         assertEquals("必须完成216局测试", 216, tested);
+    }
+
+    /**
+     * 测试216局中的四套替卦候选盘。
+     */
+    @Test
+    public void testAll216ReplacementCandidateCharts() {
+        int tested = 0;
+        int mountainAvailableCount = 0;
+        int facingAvailableCount = 0;
+
+        for (int year : PERIOD_YEARS) {
+            for (String mountain : MOUNTAINS) {
+
+                XuanKongCalculator.ResidenceChart chart =
+                        XuanKongCalculator.getResidenceChart(year, mountain);
+
+                assertNotNull("住宅排盘不能为空", chart);
+
+                String description =
+                        year + "年，" + mountain + "山，"
+                                + chart.facingMountain + "向";
+
+                // 坐山替卦方案A、B
+                assertReplacementChart(
+                        description + "坐山替卦",
+                        chart.mountainReplacementAvailable,
+                        chart.mountainReplacementResult,
+                        chart.mountainReplacementStarsA,
+                        chart.mountainReplacementStarsB
+                );
+
+                if (chart.mountainReplacementAvailable) {
+                    mountainAvailableCount++;
+                }
+
+                // 朝向替卦方案A、B
+                assertReplacementChart(
+                        description + "朝向替卦",
+                        chart.facingReplacementAvailable,
+                        chart.facingReplacementResult,
+                        chart.facingReplacementStarsA,
+                        chart.facingReplacementStarsB
+                );
+
+                if (chart.facingReplacementAvailable) {
+                    facingAvailableCount++;
+                }
+
+                tested++;
+            }
+        }
+
+        assertEquals("必须完成216局替卦候选盘测试",
+                216, tested);
+
+        assertTrue("应当至少存在一局坐山替卦候选盘",
+                mountainAvailableCount > 0);
+
+        assertTrue("应当至少存在一局朝向替卦候选盘",
+                facingAvailableCount > 0);
+    }
+
+    /**
+     * 测试替卦候选盘不会改变原来的基础下卦盘。
+     */
+    @Test
+    public void testReplacementDoesNotChangeOriginalChart() {
+
+        XuanKongCalculator.ResidenceChart chart =
+                XuanKongCalculator.getResidenceChart(2014, "乙");
+
+        assertNotNull(chart);
+
+        assertArrayEquals(
+                "原运盘不能改变",
+                new int[]{8, 9, 1, 2, 3, 4, 5, 6, 7},
+                chart.periodStars
+        );
+
+        assertArrayEquals(
+                "原山盘不能改变",
+                new int[]{6, 7, 8, 9, 1, 2, 3, 4, 5},
+                chart.mountainStars
+        );
+
+        assertArrayEquals(
+                "原向盘不能改变",
+                new int[]{1, 9, 8, 7, 6, 5, 4, 3, 2},
+                chart.facingStars
+        );
     }
 
     /**
