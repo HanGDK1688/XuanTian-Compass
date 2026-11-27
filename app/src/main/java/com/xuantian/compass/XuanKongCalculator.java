@@ -49,14 +49,6 @@ public class XuanKongCalculator {
             "乾", "亥", "壬"
     };
 
-    /*
-     * 每个宫位的三元龙顺序：
-     * 地元龙、天元龙、人元龙。
-     *
-     * 宫位索引：
-     * 0中宫，1乾，2兑，3艮，4离，
-     * 5坎，6坤，7震，8巽。
-     */
     private static final String[][] PALACE_MOUNTAINS = {
             {},
             {"戌", "乾", "亥"},
@@ -69,13 +61,6 @@ public class XuanKongCalculator {
             {"辰", "巽", "巳"}
     };
 
-    /*
-     * 三元龙阴阳：
-     * 地元龙、天元龙、人元龙。
-     *
-     * true = 阳
-     * false = 阴
-     */
     private static final boolean[][] PALACE_YIN_YANG = {
             {},
             {false, true, true},
@@ -132,40 +117,10 @@ public class XuanKongCalculator {
 
             this.centerStar = centerStar;
             this.year = year;
-
-            this.palaceStars =
-                    flyFromCenter(centerStar);
+            this.palaceStars = flyFromCenter(centerStar);
         }
     }
 
-    /*
-     * 住宅三盘及替卦候选盘。
-     *
-     * 原有字段全部保留。
-     *
-     * 新增：
-     *
-     * mountainReplacementResult：
-     * 坐山替卦计算结果。
-     *
-     * facingReplacementResult：
-     * 朝向替卦计算结果。
-     *
-     * mountainReplacementStarsA：
-     * 坐山替卦方案A星盘。
-     *
-     * mountainReplacementStarsB：
-     * 坐山替卦方案B星盘。
-     *
-     * facingReplacementStarsA：
-     * 朝向替卦方案A星盘。
-     *
-     * facingReplacementStarsB：
-     * 朝向替卦方案B星盘。
-     *
-     * 注意：
-     * 这些是替卦候选盘，不代表已经确认采用某一流派。
-     */
     public static class ResidenceChart {
 
         public int year;
@@ -190,23 +145,18 @@ public class XuanKongCalculator {
         public String mountainDirection;
         public String facingDirection;
 
-        // 坐山替卦计算结果
         public XuanKongReplacementCalculator.ReplacementResult
                 mountainReplacementResult;
 
-        // 朝向替卦计算结果
         public XuanKongReplacementCalculator.ReplacementResult
                 facingReplacementResult;
 
-        // 坐山替卦方案A、方案B
         public int[] mountainReplacementStarsA;
         public int[] mountainReplacementStarsB;
 
-        // 朝向替卦方案A、方案B
         public int[] facingReplacementStarsA;
         public int[] facingReplacementStarsB;
 
-        // 替卦候选盘是否计算成功
         public boolean mountainReplacementAvailable;
         public boolean facingReplacementAvailable;
 
@@ -427,22 +377,18 @@ public class XuanKongCalculator {
     }
 
     /**
-     * 获取住宅三盘。
+     * 兼容旧版入口。
      *
-     * year：
-     * 已经按入住日期及立春确定的节气年份。
+     * 旧版只传坐山，朝向自动取对宫。
      *
-     * sittingMountain：
-     * 坐山，例如“卯”。
-     *
-     * 朝向自动取坐山相反的二十四山。
+     * 原有固定案例校验继续使用此入口。
      */
     public static ResidenceChart getResidenceChart(
             int year,
             String sittingMountain) {
 
-        int sittingIndex = getMountainIndex(
-                sittingMountain);
+        int sittingIndex =
+                getMountainIndex(sittingMountain);
 
         if (sittingIndex < 0) {
             return null;
@@ -450,8 +396,42 @@ public class XuanKongCalculator {
 
         int facingIndex = (sittingIndex + 12) % 24;
 
-        String facingMountain =
-                MOUNTAINS[facingIndex];
+        return getResidenceChart(
+                year,
+                sittingMountain,
+                MOUNTAINS[facingIndex]
+        );
+    }
+
+    /**
+     * 新版住宅排盘入口。
+     *
+     * 坐山和朝向分别使用住宅档案提供的数据。
+     *
+     * 不再强制根据坐山推算朝向。
+     */
+    public static ResidenceChart getResidenceChart(
+            int year,
+            String sittingMountain,
+            String facingMountain) {
+
+        if (sittingMountain == null
+                || facingMountain == null) {
+            return null;
+        }
+
+        sittingMountain = sittingMountain.trim();
+        facingMountain = facingMountain.trim();
+
+        int sittingIndex =
+                getMountainIndex(sittingMountain);
+
+        int facingIndex =
+                getMountainIndex(facingMountain);
+
+        if (sittingIndex < 0 || facingIndex < 0) {
+            return null;
+        }
 
         PeriodInfo periodInfo = getPeriod(year);
 
@@ -512,13 +492,13 @@ public class XuanKongCalculator {
         chart.periodStars =
                 periodChart.palaceStars.clone();
 
-        // 原有基础下卦山盘
+        // 保留原有基础下卦山盘算法
         chart.mountainStars =
                 flyFromCenter(
                         mountainCenter,
                         mountainForward);
 
-        // 原有基础下卦向盘
+        // 保留原有基础下卦向盘算法
         chart.facingStars =
                 flyFromCenter(
                         facingCenter,
@@ -531,29 +511,21 @@ public class XuanKongCalculator {
                 facingForward ? "顺飞" : "逆飞";
 
         /*
-         * 新增替卦候选盘计算。
+         * 保留旧版沈氏候选盘计算。
          *
-         * 注意：
-         * 这里只生成候选结果。
-         * 是否真正采用替卦，仍需要由角度分析决定。
+         * 后续 V1.6 界面会通过 ResidenceReplacementEngine
+         * 根据所选流派及实际角度独立计算。
          */
         calculateMountainReplacementCharts(chart);
-
         calculateFacingReplacementCharts(chart);
 
         return chart;
     }
 
-    /**
-     * 计算坐山替卦候选盘。
-     *
-     * 方案A、方案B分别生成独立九宫数组。
-     */
     private static void calculateMountainReplacementCharts(
             ResidenceChart chart) {
 
         chart.mountainReplacementAvailable = false;
-
         chart.mountainReplacementStarsA = null;
         chart.mountainReplacementStarsB = null;
         chart.mountainReplacementResult = null;
@@ -598,16 +570,10 @@ public class XuanKongCalculator {
                         chart.mountainReplacementStarsB);
     }
 
-    /**
-     * 计算朝向替卦候选盘。
-     *
-     * 方案A、方案B分别生成独立九宫数组。
-     */
     private static void calculateFacingReplacementCharts(
             ResidenceChart chart) {
 
         chart.facingReplacementAvailable = false;
-
         chart.facingReplacementStarsA = null;
         chart.facingReplacementStarsB = null;
         chart.facingReplacementResult = null;
@@ -652,9 +618,6 @@ public class XuanKongCalculator {
                         chart.facingReplacementStarsB);
     }
 
-    /**
-     * 验证九宫数组是否包含完整的1至9九星。
-     */
     public static boolean isValidNineStarChart(int[] stars) {
 
         if (stars == null || stars.length != 9) {
@@ -726,35 +689,17 @@ public class XuanKongCalculator {
 
         switch (star) {
 
-            case 1:
-                return 5;
+            case 1: return 5;
+            case 2: return 6;
+            case 3: return 7;
+            case 4: return 8;
+            case 5: return 0;
+            case 6: return 1;
+            case 7: return 2;
+            case 8: return 3;
+            case 9: return 4;
 
-            case 2:
-                return 6;
-
-            case 3:
-                return 7;
-
-            case 4:
-                return 8;
-
-            case 5:
-                return 0;
-
-            case 6:
-                return 1;
-
-            case 7:
-                return 2;
-
-            case 8:
-                return 3;
-
-            case 9:
-                return 4;
-
-            default:
-                return -1;
+            default: return -1;
         }
     }
 
